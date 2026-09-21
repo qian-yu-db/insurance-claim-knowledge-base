@@ -12,6 +12,7 @@ Everything here is **synthetic**. It is meant as a blueprint you adapt to your o
 |---|---|---|
 | **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | Ready-to-use synthetic test set: 3 internally-consistent auto-collision claims (69 artifacts across modalities) + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). Bring your own claim data for production. |
 | **Batch pipeline** | [`pipeline/notebooks/`](pipeline/notebooks/) | Medallion pipeline (Bronze → Silver → Gold → Vector Search) built on Databricks AI Functions. See its [README](pipeline/notebooks/README.md). |
+| **Genie space** | [`genie/`](genie/) | Exported config + import script for the Genie space over the structured facts (`dim_claim`, `fact_payments`) that the app routes fact/aggregation questions to. See its [README](genie/README.md). |
 | **Adjuster console app** | [`adjuster-console/`](adjuster-console/) | FastAPI + vanilla-JS 2-pane app (doc/image/transcript viewer + grounded chat), deployed to Databricks Apps. |
 | **Architecture** | [`docs/claims_kb_architecture.md`](docs/claims_kb_architecture.md) | Diagram + design notes. |
 | **Data residency** | [`docs/data_residency.md`](docs/data_residency.md) | Where each asset lives (customer storage vs Databricks-managed) + Vector Search custody options. |
@@ -63,6 +64,10 @@ flowchart TB
 **Pipeline** — import `pipeline/notebooks/` into your workspace and run `00_config` → `07` on a
 DBR 18.2+ / serverless-env-v3+ cluster (see the [notebooks README](pipeline/notebooks/README.md) for
 prerequisites and the AI-function version requirements).
+
+**Genie space** — the app depends on it for structured/fact questions. Create it before deploying the app:
+`cd genie && PROFILE=<your-profile> WAREHOUSE_ID=<sql-warehouse-id> ./create_space.sh` — see
+[`genie/README.md`](genie/README.md), then put the returned `space_id` into the app config below.
 
 **App** — from `adjuster-console/`:
 ```bash

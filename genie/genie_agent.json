@@ -1,0 +1,257 @@
+{
+  "version": 2,
+  "data_sources": {
+    "tables": [
+      {
+        "identifier": "fins_genai.claims_multimodal_kb.dim_claim",
+        "column_configs": [
+          {
+            "column_name": "adjuster_name",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "carrier",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "claim_id",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "claimant_name",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "date_of_loss",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "distinct_doc_types",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "doc_count",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "insured_name",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "loss_location",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "loss_year",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "max_amount_seen",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "peril",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "policy_number",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          }
+        ]
+      },
+      {
+        "identifier": "fins_genai.claims_multimodal_kb.fact_payments",
+        "column_configs": [
+          {
+            "column_name": "amount_usd",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "claim_id",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "claim_number",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "payee",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "source_uri",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "status",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "transaction_type",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "txn_date",
+            "enable_format_assistance": true
+          }
+        ]
+      }
+    ]
+  },
+  "instructions": {
+    "text_instructions": [
+      {
+        "id": "01f1b0d273b1147389820082d527b0a1",
+        "content": [
+          "### Currency\n",
+          "All monetary amounts (amount_usd, max_amount_seen) are in US dollars (USD).\n",
+          "\n",
+          "### Transaction type definitions\n",
+          "The transaction_type column in fact_payments has three values:\n",
+          "- \"indemnity\" — payment made directly to the insured or claimant for covered losses.\n",
+          "- \"expense\" — claim-handling costs such as appraisals, inspections, or independent adjuster fees.\n",
+          "- \"defense_expense\" — legal defense costs (e.g., attorney fees) incurred while defending the claim.\n",
+          "\n",
+          "### Payment status definitions\n",
+          "The status column in fact_payments has two values:\n",
+          "- \"Paid\" — the payment has been issued and settled.\n",
+          "- \"Negotiated — pending release\" — the amount has been agreed upon but funds have not yet been disbursed.\n",
+          "\n",
+          "### dim_claim max_amount_seen and doc_count\n",
+          "In dim_claim, max_amount_seen is the largest single payment amount observed across all transactions for that claim. doc_count is the total number of supporting documents on file, and distinct_doc_types is how many different document categories are represented."
+        ]
+      }
+    ],
+    "example_question_sqls": [
+      {
+        "id": "01f1b0d2737c133db64323922977516f",
+        "question": [
+          "What is the total paid amount by carrier?"
+        ],
+        "sql": [
+          "SELECT c.carrier, SUM(p.amount_usd) AS total_paid\n",
+          "FROM fins_genai.claims_multimodal_kb.fact_payments p\n",
+          "JOIN fins_genai.claims_multimodal_kb.dim_claim c\n",
+          "  ON p.claim_id = c.claim_id\n",
+          "WHERE p.status = 'Paid'\n",
+          "GROUP BY c.carrier\n",
+          "ORDER BY total_paid DESC"
+        ]
+      },
+      {
+        "id": "01f1b0d2737c17199fb24e953521264e",
+        "question": [
+          "How are payments distributed across transaction types?"
+        ],
+        "sql": [
+          "SELECT p.transaction_type,\n",
+          "       COUNT(*) AS payment_count,\n",
+          "       SUM(p.amount_usd) AS total_amount\n",
+          "FROM fins_genai.claims_multimodal_kb.fact_payments p\n",
+          "GROUP BY p.transaction_type\n",
+          "ORDER BY total_amount DESC"
+        ]
+      },
+      {
+        "id": "01f1b0d2737c19ab9caf9586f28dc559",
+        "question": [
+          "Which claims have the highest total paid amount?"
+        ],
+        "sql": [
+          "SELECT c.claim_id,\n",
+          "       c.insured_name,\n",
+          "       c.carrier,\n",
+          "       c.peril,\n",
+          "       SUM(p.amount_usd) AS total_paid\n",
+          "FROM fins_genai.claims_multimodal_kb.fact_payments p\n",
+          "JOIN fins_genai.claims_multimodal_kb.dim_claim c\n",
+          "  ON p.claim_id = c.claim_id\n",
+          "GROUP BY c.claim_id, c.insured_name, c.carrier, c.peril\n",
+          "ORDER BY total_paid DESC"
+        ]
+      },
+      {
+        "id": "01f1b0d2737c1bfb939572d33917ad48",
+        "question": [
+          "What is the total paid amount by peril type?"
+        ],
+        "sql": [
+          "SELECT c.peril,\n",
+          "       SUM(p.amount_usd) AS total_paid,\n",
+          "       COUNT(DISTINCT c.claim_id) AS claim_count\n",
+          "FROM fins_genai.claims_multimodal_kb.fact_payments p\n",
+          "JOIN fins_genai.claims_multimodal_kb.dim_claim c\n",
+          "  ON p.claim_id = c.claim_id\n",
+          "GROUP BY c.peril\n",
+          "ORDER BY total_paid DESC"
+        ]
+      }
+    ],
+    "join_specs": [
+      {
+        "id": "01f1b0d27327120abf62f12f44aa2f4a",
+        "left": {
+          "identifier": "fins_genai.claims_multimodal_kb.fact_payments"
+        },
+        "right": {
+          "identifier": "fins_genai.claims_multimodal_kb.dim_claim"
+        },
+        "sql": [
+          "fact_payments.claim_id = dim_claim.claim_id",
+          "--rt=FROM_RELATIONSHIP_TYPE_MANY_TO_ONE--"
+        ],
+        "comment": [
+          "Payments to claim details"
+        ]
+      }
+    ],
+    "sql_snippets": {
+      "filters": [
+        {
+          "id": "01f1b0d2732c18699f7d5f50f5ad4e05",
+          "sql": [
+            "fact_payments.status = 'Paid'"
+          ],
+          "display_name": "Paid transactions only"
+        }
+      ],
+      "expressions": [
+        {
+          "id": "01f1b0d2732d130cbee436aafed4e9ed",
+          "sql": [
+            "SUM(CASE WHEN fact_payments.transaction_type = 'indemnity' THEN fact_payments.amount_usd ELSE 0 END) + SUM(CASE WHEN fact_payments.transaction_type IN ('expense', 'defense_expense') THEN fact_payments.amount_usd ELSE 0 END)"
+          ],
+          "display_name": "Total claim cost (indemnity + all expenses)"
+        }
+      ],
+      "measures": [
+        {
+          "id": "01f1b0d2732c1d5783a11226969b6ed7",
+          "sql": [
+            "SUM(fact_payments.amount_usd)"
+          ],
+          "display_name": "Total paid amount"
+        },
+        {
+          "id": "01f1b0d2732d108fbfa794f6132c5b65",
+          "sql": [
+            "AVG(fact_payments.amount_usd)"
+          ],
+          "display_name": "Average payment amount"
+        }
+      ]
+    }
+  }
+}
