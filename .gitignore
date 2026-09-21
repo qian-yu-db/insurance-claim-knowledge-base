@@ -25,6 +25,6 @@ __pycache__/
 
 # --- Local-only: synthetic-data generator + its large source audio ---
 # The shipped test set is sample_data/claims/; the generator and its source
-# mp3s are kept locally (customers bring their own data).
+# mp3s are kept locally
 /generator/
 /sample_data/*.mp3
