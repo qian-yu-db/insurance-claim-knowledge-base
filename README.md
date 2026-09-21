@@ -17,17 +17,37 @@ Everything here is **synthetic**. It is meant as a blueprint you adapt to your o
 
 ## Architecture at a glance
 
-```
-                 ┌─────────────────────────── Batch pipeline (pipeline/notebooks) ──────────────────────────┐
-raw claim files → Bronze (ingest + route by modality) → Silver (parse / caption / transcribe → documents)
-                     → Gold (semantic chunks)  → Vector Search index          (unstructured KB)
-                     → dim_claim + fact_payments (Delta)                       (structured facts, via Genie)
-                 └──────────────────────────────────────────────────────────────────────────────────────────┘
-                                                        │
-        Adjuster console app (adjuster-console) ────────┤  orchestrator agent (OpenAI Agents SDK) routes:
-          • left pane: document / image / transcript viewer   • docs  → Vector Search (MCP)
-          • right pane: grounded chat with clickable citations • facts → Genie space   (MCP)
-                                                               • math  → python_exec    (MCP)
+```mermaid
+flowchart TB
+    RAW["Raw claim files<br/>email · PDF · image · Office · audio"]
+
+    subgraph PIPE["Batch pipeline — pipeline/notebooks"]
+        direction TB
+        BRONZE["Bronze<br/>ingest + route by modality"]
+        SILVER["Silver<br/>parse / caption / transcribe → documents"]
+        GOLD["Gold<br/>semantic chunks"]
+        VS["Vector Search index<br/>unstructured KB"]
+        FACTS["dim_claim + fact_payments<br/>Delta — structured facts"]
+        BRONZE --> SILVER
+        SILVER --> GOLD --> VS
+        SILVER --> FACTS
+    end
+
+    subgraph APP["Adjuster console app — adjuster-console"]
+        direction TB
+        CHAT["Right pane<br/>grounded chat + clickable citations"]
+        ORCH["Orchestrator agent<br/>OpenAI Agents SDK"]
+        VIEW["Left pane<br/>document / image / transcript viewer"]
+        CHAT --> ORCH
+        ORCH -. citations .-> VIEW
+    end
+
+    RAW --> BRONZE
+    ORCH -->|"docs (MCP)"| VS
+    ORCH -->|"facts (MCP)"| GENIE["Genie space"]
+    GENIE --> FACTS
+    ORCH -->|"math (MCP)"| PY["python_exec"]
+    VIEW -. reads .-> SILVER
 ```
 
 - **AI Functions used:** `ai_parse_document`, `ai_classify`, `ai_extract`, `ai_prep_search`, and
