@@ -21,7 +21,10 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
-/.claude/
+
+# Claude Code config / skills at any depth. The app-scaffold skills were copied
+# from databricks/app-templates and are kept local-only (not redistributed here).
+.claude/
 
 # --- Local-only: synthetic-data generator + its large source audio ---
 # The shipped test set is sample_data/claims/; the generator and its source
