@@ -15,6 +15,7 @@ Everything here is **synthetic**. It is meant as a blueprint you adapt to your o
 | **Adjuster console app** | [`adjuster-console/`](adjuster-console/) | FastAPI + vanilla-JS 2-pane app (doc/image/transcript viewer + grounded chat), deployed to Databricks Apps. |
 | **Architecture** | [`docs/claims_kb_architecture.md`](docs/claims_kb_architecture.md) | Diagram + design notes. |
 | **Data residency** | [`docs/data_residency.md`](docs/data_residency.md) | Where each asset lives (customer storage vs Databricks-managed) + Vector Search custody options. |
+| **Design options & scaling** | [`docs/design_options_and_scaling.md`](docs/design_options_and_scaling.md) | How to expand the default: index structure, scaling for large data, more categories/modalities. |
 
 ## Architecture at a glance
 
