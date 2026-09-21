@@ -53,10 +53,9 @@ claims/
   extraction, transcription, and cross-modal linkage. `eval_questions.json` follows the Databricks
   Knowledge-Assistant / retrieval-eval paired-question pattern.
 
-## Regenerating
+## Provenance
 
-```bash
-cd ../../generator && uv run python main.py
-```
-
-Deterministic (seeded image selection). Requires macOS `say` + `ffmpeg` for audio.
+This dataset is synthetic and provided as-is as a ready-to-use test set. It was produced by a
+deterministic generator (seeded image selection; macOS `say` + `ffmpeg` for audio) that is kept
+local-only and is **not** part of this repository — customers are expected to bring their own claim
+data for production use.

@@ -10,8 +10,7 @@ Everything here is **synthetic**. It is meant as a blueprint you adapt to your o
 
 | Component | Path | What it is |
 |---|---|---|
-| **Synthetic data generator** | [`generator/`](generator/) | Produces 3 internally-consistent auto-collision claims (69 artifacts) across modalities. One-time tool. |
-| **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | The generated claims + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). |
+| **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | Ready-to-use synthetic test set: 3 internally-consistent auto-collision claims (69 artifacts across modalities) + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). Bring your own claim data for production. |
 | **Batch pipeline** | [`pipeline/notebooks/`](pipeline/notebooks/) | Medallion pipeline (Bronze → Silver → Gold → Vector Search) built on Databricks AI Functions. See its [README](pipeline/notebooks/README.md). |
 | **Adjuster console app** | [`adjuster-console/`](adjuster-console/) | FastAPI + vanilla-JS 2-pane app (doc/image/transcript viewer + grounded chat), deployed to Databricks Apps. |
 | **Architecture** | [`docs/claims_kb_architecture.md`](docs/claims_kb_architecture.md) | Diagram + design notes. |
@@ -70,5 +69,6 @@ swap them for your own values before deploying:
 ## Notes
 
 - No credentials are committed. `.env`, `.venv/`, and `.databricks/` are git-ignored.
-- Local dev uses [`uv`](https://docs.astral.sh/uv/). After cloning, run `uv sync` in `generator/` and
-  `adjuster-console/`.
+- Local dev uses [`uv`](https://docs.astral.sh/uv/). After cloning, run `uv sync` in `adjuster-console/`.
+- The `sample_data/claims/` set is synthetic and provided as-is for testing; the generator used to
+  create it is kept local-only (not part of this repo).
