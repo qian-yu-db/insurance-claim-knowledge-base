@@ -1,0 +1,101 @@
+bundle:
+  name: agent_openai_agents_sdk_multiagent
+
+resources:
+  apps:
+    agent_openai_agents_sdk_multiagent:
+      name: "agent-openai-multiagent"
+      description: "Multi-agent orchestrator that queries other agents, Genie spaces,
+        and serving endpoints"
+      source_code_path: ./
+      config:
+        # Single process: FastAPI serves the agent (/invocations), the data APIs (/api/*),
+        # and the 2-pane SPA (client/) as static files.
+        command: ["uv", "run", "start-server"]
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "databricks"
+          - name: MLFLOW_REGISTRY_URI
+            value: "databricks-uc"
+          - name: MLFLOW_EXPERIMENT_ID
+            value_from: "experiment"
+          - name: DATABRICKS_WAREHOUSE_ID
+            value: "322702d284b4a804"
+
+      # Resources which this app has access to
+      resources:
+        - name: 'experiment'
+          experiment:
+            experiment_id: "2456186449359403"
+            permission: 'CAN_MANAGE'
+
+        # Genie space — structured claims data (fact_payments, dim_claim)
+        - name: 'genie_space'
+          genie_space:
+            name: 'Insurance Claims and Payments'
+            space_id: '01f1b0d16247106aacc4750ce7e1b24f'
+            permission: 'CAN_RUN'
+
+        # Vector Search index — unstructured multi-modal claims KB
+        - name: 'claims_kb_index'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.gold_chunks_vs_index'
+            securable_type: 'TABLE'
+            permission: 'SELECT'
+
+        # python_exec — ad-hoc calculations
+        - name: 'python_exec'
+          uc_securable:
+            securable_full_name: 'system.ai.python_exec'
+            securable_type: 'FUNCTION'
+            permission: 'EXECUTE'
+
+        # Orchestrator LLM endpoint
+        - name: 'orchestrator_model'
+          serving_endpoint:
+            name: 'databricks-gpt-5-2'
+            permission: 'CAN_QUERY'
+
+        # --- Viewer data access (doc/claim/file APIs) ---
+        # Landing Volume — read source files (PDFs, images) for the viewer
+        - name: 'landing_volume'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.landing'
+            securable_type: 'VOLUME'
+            permission: 'READ_VOLUME'
+        - name: 'dim_claim'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.dim_claim'
+            securable_type: 'TABLE'
+            permission: 'SELECT'
+        - name: 'bronze_file_registry'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.bronze_file_registry'
+            securable_type: 'TABLE'
+            permission: 'SELECT'
+        - name: 'silver_documents'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.silver_documents'
+            securable_type: 'TABLE'
+            permission: 'SELECT'
+        # SQL warehouse for the data APIs
+        - name: 'sql_warehouse'
+          sql_warehouse:
+            id: '322702d284b4a804'
+            permission: 'CAN_USE'
+
+targets:
+  dev:
+    mode: development
+    default: true
+    # workspace:
+    #   host: https://...
+
+  prod:
+    mode: production
+    # workspace:
+    #   host: https://...
+    resources:
+      apps:
+        agent_openai_agents_sdk_multiagent:
+          name: agent-openai-multiagent

@@ -1,0 +1,13 @@
+{
+  "claim_number": "CLM-2026-04487",
+  "policy_number": "PA-2026-101618579",
+  "carrier": "Harbor Mutual Insurance",
+  "peril": "Vehicle collision",
+  "severity": "major",
+  "complexity": "litigation-bodily-injury",
+  "date_of_loss": "2026-02-11",
+  "reported_date": "2026-02-11",
+  "insured": "Patricia J. Carmichael",
+  "artifact_count": 31,
+  "source_system": "synthetic-generator"
+}

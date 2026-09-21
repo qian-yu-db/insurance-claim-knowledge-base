@@ -1,0 +1,24 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# --- Virtual envs (regenerate with `uv sync`) ---
+.venv/
+**/.venv/
+
+# --- Secrets / local config ---
+.env
+**/.env
+**/.env.local
+
+# --- Databricks CLI / bundle local state ---
+.databricks/
+**/.databricks/
+
+# --- Editor / OS / assistant tooling ---
+.vscode/
+.idea/
+.DS_Store
+/.claude/

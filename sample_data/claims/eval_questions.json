@@ -1,0 +1,36 @@
+{
+  "CLM-2026-04412": [
+    {
+      "question": "What is the net amount payable to the insured after the deductible on claim CLM-2026-04412?",
+      "expected_fact": "$2,660.25 net payable after a $500 deductible."
+    },
+    {
+      "question": "What is the VIN of the insured vehicle in claim CLM-2026-04412?",
+      "expected_fact": "1HGCV1F13NA004217 (2022 Honda Accord EX)."
+    }
+  ],
+  "CLM-2026-04487": [
+    {
+      "question": "What is the plaintiff demand amount in claim CLM-2026-04487 and who made it?",
+      "expected_fact": "$225,000 demand by Ramirez Law Group on behalf of Denise R. Varga."
+    },
+    {
+      "question": "What are the alleged diagnoses in the claimant medical records for CLM-2026-04487?",
+      "expected_fact": "Cervical strain, lumbar disc herniation L4-L5, and post-concussive syndrome."
+    },
+    {
+      "question": "What settlement amount did the carrier offer in CLM-2026-04487?",
+      "expected_fact": "$132,500, negotiated, pending release."
+    }
+  ],
+  "CLM-2026-04531": [
+    {
+      "question": "Why was claim CLM-2026-04531 referred to the Special Investigations Unit?",
+      "expected_fact": "Damage pattern is inconsistent with the reported deer strike; SIU recommends examination under oath (ref SIU-2026-0771)."
+    },
+    {
+      "question": "Which attachment in the SIU investigation email is NOT filed in the claim folder?",
+      "expected_fact": "The SIU field photo log (CLM-2026-04531_SIU_field_photo_log.pdf) exists only as an email attachment."
+    }
+  ]
+}

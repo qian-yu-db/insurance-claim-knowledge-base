@@ -1,0 +1,4 @@
+claim_number,transaction_type,date,payee,amount_usd,status
+CLM-2026-04487,indemnity,2026-08-27,Patricia J. Carmichael,132500.00,Negotiated — pending release
+CLM-2026-04487,expense,2026-02-11,Apex Appraisal Services,350.00,Paid
+CLM-2026-04487,defense_expense,2026-02-11,Nguyen & Associates,12500.00,Paid

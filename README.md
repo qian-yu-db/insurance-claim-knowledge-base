@@ -1,0 +1,74 @@
+# Insurance Claim Knowledge Base
+
+A reference implementation, on Databricks, of a **multi-modal knowledge base for insurance claims
+adjusters** — from raw claim artifacts (emails, PDFs, images, Office docs, audio) to a searchable
+knowledge base and a custom **adjuster console** app (document viewer + grounded chat).
+
+Everything here is **synthetic**. It is meant as a blueprint you adapt to your own workspace.
+
+## What's in the repo
+
+| Component | Path | What it is |
+|---|---|---|
+| **Synthetic data generator** | [`generator/`](generator/) | Produces 3 internally-consistent auto-collision claims (69 artifacts) across modalities. One-time tool. |
+| **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | The generated claims + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). |
+| **Batch pipeline** | [`pipeline/notebooks/`](pipeline/notebooks/) | Medallion pipeline (Bronze → Silver → Gold → Vector Search) built on Databricks AI Functions. See its [README](pipeline/notebooks/README.md). |
+| **Adjuster console app** | [`adjuster-console/`](adjuster-console/) | FastAPI + vanilla-JS 2-pane app (doc/image/transcript viewer + grounded chat), deployed to Databricks Apps. |
+| **Architecture** | [`docs/claims_kb_architecture.md`](docs/claims_kb_architecture.md) | Diagram + design notes. |
+
+## Architecture at a glance
+
+```
+                 ┌─────────────────────────── Batch pipeline (pipeline/notebooks) ──────────────────────────┐
+raw claim files → Bronze (ingest + route by modality) → Silver (parse / caption / transcribe → documents)
+                     → Gold (semantic chunks)  → Vector Search index          (unstructured KB)
+                     → dim_claim + fact_payments (Delta)                       (structured facts, via Genie)
+                 └──────────────────────────────────────────────────────────────────────────────────────────┘
+                                                        │
+        Adjuster console app (adjuster-console) ────────┤  orchestrator agent (OpenAI Agents SDK) routes:
+          • left pane: document / image / transcript viewer   • docs  → Vector Search (MCP)
+          • right pane: grounded chat with clickable citations • facts → Genie space   (MCP)
+                                                               • math  → python_exec    (MCP)
+```
+
+- **AI Functions used:** `ai_parse_document`, `ai_classify`, `ai_extract`, `ai_prep_search`, and
+  audio transcription via **`ai_transcribe`** (preferred — built-in, speaker diarization) or `ai_query`
+  against a Whisper endpoint (the two `03c_*` notebooks are alternatives — run one).
+- **Retrieval:** hybrid Vector Search over chunked, metadata-tagged documents; exact aggregation over the
+  payment ledger stays in Delta and is answered by a Genie space (semantic search over a ledger is weak).
+
+## Quickstart
+
+**Pipeline** — import `pipeline/notebooks/` into your workspace and run `00_config` → `07` on a
+DBR 18.2+ / serverless-env-v3+ cluster (see the [notebooks README](pipeline/notebooks/README.md) for
+prerequisites and the AI-function version requirements).
+
+**App** — from `adjuster-console/`:
+```bash
+uv run quickstart --profile <your-profile>   # auth + .env + MLflow experiment
+uv run preflight                             # local smoke test
+databricks bundle deploy   --profile <your-profile>
+databricks bundle run agent_openai_agents_sdk_multiagent --profile <your-profile>
+```
+More detail in [`adjuster-console/README.md`](adjuster-console/README.md).
+
+## ⚠️ Replace the reference-workspace IDs with your own
+
+This repo ships with the **workspace-specific identifiers from the reference deployment**. They are
+**not secrets** (they're useless without auth to that workspace), but they will **not** work in yours —
+swap them for your own values before deploying:
+
+| Where | What to replace |
+|---|---|
+| `adjuster-console/databricks.yml` | Genie `space_id`, `sql_warehouse` / `warehouse_id`, `experiment_id`, serving-endpoint name, the `fins_genai.claims_multimodal_kb` catalog/schema and Vector Search index |
+| `adjuster-console/agent_server/agent.py` | `GENIE_SPACE_ID`, `VS_CATALOG` / `VS_SCHEMA` / `VS_INDEX`, `MODEL` |
+| `adjuster-console/agent_server/data_api.py` | `CATALOG` / `SCHEMA` (and the landing-Volume prefix) |
+| `pipeline/notebooks/00_config.py` | catalog/schema, volume path, endpoint names |
+
+`uv run quickstart` regenerates `.env` (git-ignored) and the MLflow experiment for your workspace.
+
+## Notes
+
+- No credentials are committed. `.env`, `.venv/`, and `.databricks/` are git-ignored.
+- Local dev uses [`uv`](https://docs.astral.sh/uv/). After cloning, run `uv sync` in `generator/` and
+  `adjuster-console/`.

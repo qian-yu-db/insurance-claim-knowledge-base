@@ -1,0 +1,13 @@
+{
+  "claim_number": "CLM-2026-04412",
+  "policy_number": "PA-2026-101618576",
+  "carrier": "Summit Ridge Casualty",
+  "peril": "Vehicle collision",
+  "severity": "minor",
+  "complexity": "fast-track",
+  "date_of_loss": "2026-03-04",
+  "reported_date": "2026-03-05",
+  "insured": "Marcus T. Okonkwo",
+  "artifact_count": 19,
+  "source_system": "synthetic-generator"
+}

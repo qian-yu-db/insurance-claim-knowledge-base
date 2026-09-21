@@ -1,0 +1,2 @@
+claim_number,transaction_type,date,payee,amount_usd,status
+CLM-2026-04531,expense,2026-04-22,Apex Appraisal Services,350.00,Paid

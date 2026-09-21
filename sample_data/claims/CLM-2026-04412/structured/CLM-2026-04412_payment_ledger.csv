@@ -1,0 +1,3 @@
+claim_number,transaction_type,date,payee,amount_usd,status
+CLM-2026-04412,indemnity,2026-03-19,Marcus T. Okonkwo,2660.25,Paid
+CLM-2026-04412,expense,2026-03-05,Apex Appraisal Services,350.00,Paid
