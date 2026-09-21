@@ -99,3 +99,12 @@ swap them for your own values before deploying:
 - Local dev uses [`uv`](https://docs.astral.sh/uv/). After cloning, run `uv sync` in `adjuster-console/`.
 - The `sample_data/claims/` set is synthetic and provided as-is for testing; the generator used to
   create it is kept local-only (not part of this repo).
+
+## License & attribution
+
+The `adjuster-console/` app is a derivative work of Databricks
+[app-templates](https://github.com/databricks/app-templates) (the `agent-openai-agents-sdk-multiagent`
+template), used under the **Databricks License** — see [`adjuster-console/LICENSE`](adjuster-console/LICENSE)
+and [`adjuster-console/NOTICE`](adjuster-console/NOTICE) (which records the modifications). Per that
+license, use of the templated code is tied to the Databricks Services. The remaining components
+(`pipeline/`, `sample_data/`, `docs/`) are provided as-is for reference.

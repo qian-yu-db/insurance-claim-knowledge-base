@@ -1,3 +1,4 @@
+# Modified from databricks/app-templates (agent-openai-agents-sdk-multiagent); see LICENSE and NOTICE.
 from pathlib import Path
 
 from dotenv import load_dotenv
