@@ -1,6 +1,7 @@
 """Doc/claim/file APIs for the adjuster console viewer pane.
 
-Backed by the claims KB tables (via SQL warehouse) and the landing Volume (via Files API).
+Backed by the claims KB tables (Lakebase Postgres primary, SQL warehouse fallback)
+and the landing Volume (via Files API).
 Runs as the app service principal when deployed; uses the .env profile locally.
 """
 
@@ -16,6 +17,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 from sse_starlette.sse import EventSourceResponse
 
+from agent_server.lakebase import pool as lb
+
 CATALOG = "fins_genai"
 SCHEMA = "claims_multimodal_kb"
 VOLUME_PREFIX = f"/Volumes/{CATALOG}/{SCHEMA}/landing"          # security fence for file reads
@@ -28,7 +31,7 @@ router = APIRouter(prefix="/api")
 _w = WorkspaceClient()
 
 
-def _sql(statement: str, params: list | None = None) -> list[dict]:
+def _sql_warehouse(statement: str, params: list | None = None) -> list[dict]:
     """Run a query on the SQL warehouse and return rows as dicts."""
     if not WAREHOUSE_ID:
         raise HTTPException(500, "DATABRICKS_WAREHOUSE_ID is not configured")
@@ -47,40 +50,69 @@ def _sql(statement: str, params: list | None = None) -> list[dict]:
     return [dict(zip(cols, row)) for row in data]
 
 
+def _query(sql_lb: str, sql_wh: str, params_lb: tuple | None = None, params_wh: list | None = None) -> list[dict]:
+    """Run against Lakebase if available, otherwise SQL warehouse.
+
+    Falls back to SQL warehouse on any Lakebase error (missing schema, connection issues, etc.).
+    """
+    if lb.available:
+        try:
+            return lb.query(sql_lb, params_lb)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Lakebase query failed, falling back to warehouse: %s", e)
+    return _sql_warehouse(sql_wh, params_wh)
+
+
 @router.get("/claims")
 def list_claims() -> list[dict]:
     """All claims (the header row per claim) for the claim picker."""
-    return _sql(f"""
-        SELECT claim_id, carrier, peril, insured_name, claimant_name,
-               loss_year, date_of_loss, max_amount_seen, doc_count
-        FROM {CATALOG}.{SCHEMA}.dim_claim
-        ORDER BY claim_id
-    """)
+    return _query(
+        sql_lb="""SELECT claim_id, carrier, peril, insured_name, claimant_name,
+                         loss_year, date_of_loss, max_amount_seen, doc_count
+                  FROM dim_claim ORDER BY claim_id""",
+        sql_wh=f"""SELECT claim_id, carrier, peril, insured_name, claimant_name,
+                          loss_year, date_of_loss, max_amount_seen, doc_count
+                   FROM {CATALOG}.{SCHEMA}.dim_claim ORDER BY claim_id""",
+    )
 
 
 @router.get("/claims/{claim_id}/docs")
 def list_claim_docs(claim_id: str) -> list[dict]:
     """Every viewable artifact for a claim (drives the document explorer)."""
-    return _sql(f"""
-        SELECT b.doc_id, b.filename, b.ext, b.modality, b.source_uri, b.size_bytes,
-               s.doc_type, s.content_source
-        FROM {CATALOG}.{SCHEMA}.bronze_file_registry b
-        LEFT JOIN {CATALOG}.{SCHEMA}.silver_documents s ON b.doc_id = s.doc_id
-        WHERE b.claim_id = :p0 AND b.route <> 'skip'
-        ORDER BY b.modality, b.filename
-    """, [claim_id])
+    return _query(
+        sql_lb="""SELECT b.doc_id, b.filename, b.ext, b.modality, b.source_uri, b.size_bytes,
+                         s.doc_type, s.content_source
+                  FROM bronze_file_registry b
+                  LEFT JOIN silver_documents s ON b.doc_id = s.doc_id
+                  WHERE b.claim_id = %s AND b.route <> 'skip'
+                  ORDER BY b.modality, b.filename""",
+        sql_wh=f"""SELECT b.doc_id, b.filename, b.ext, b.modality, b.source_uri, b.size_bytes,
+                          s.doc_type, s.content_source
+                   FROM {CATALOG}.{SCHEMA}.bronze_file_registry b
+                   LEFT JOIN {CATALOG}.{SCHEMA}.silver_documents s ON b.doc_id = s.doc_id
+                   WHERE b.claim_id = :p0 AND b.route <> 'skip'
+                   ORDER BY b.modality, b.filename""",
+        params_lb=(claim_id,),
+        params_wh=[claim_id],
+    )
 
 
 @router.get("/claims/{claim_id}/summary")
 def claim_summary(claim_id: str) -> dict:
     """Quick summary stats for the claim detail/summary card."""
-    rows = _sql(f"""
-        SELECT claim_id, carrier, peril, insured_name, claimant_name,
-               loss_year, date_of_loss, max_amount_seen, doc_count,
-               loss_location, adjuster_name
-        FROM {CATALOG}.{SCHEMA}.dim_claim
-        WHERE claim_id = :p0
-    """, [claim_id])
+    rows = _query(
+        sql_lb="""SELECT claim_id, carrier, peril, insured_name, claimant_name,
+                         loss_year, date_of_loss, max_amount_seen, doc_count,
+                         loss_location, adjuster_name
+                  FROM dim_claim WHERE claim_id = %s""",
+        sql_wh=f"""SELECT claim_id, carrier, peril, insured_name, claimant_name,
+                          loss_year, date_of_loss, max_amount_seen, doc_count,
+                          loss_location, adjuster_name
+                   FROM {CATALOG}.{SCHEMA}.dim_claim WHERE claim_id = :p0""",
+        params_lb=(claim_id,),
+        params_wh=[claim_id],
+    )
     return rows[0] if rows else {}
 
 
@@ -91,7 +123,12 @@ def get_file(doc_id: str = Query(...)):
     - PDFs / images  → raw bytes (HEIC transcoded to JPEG for the browser)
     - text / email / structured / audio-video → the extracted text from silver_documents
     """
-    rows = _sql(f"SELECT source_uri, ext FROM {CATALOG}.{SCHEMA}.bronze_file_registry WHERE doc_id = :p0", [doc_id])
+    rows = _query(
+        sql_lb="SELECT source_uri, ext FROM bronze_file_registry WHERE doc_id = %s",
+        sql_wh=f"SELECT source_uri, ext FROM {CATALOG}.{SCHEMA}.bronze_file_registry WHERE doc_id = :p0",
+        params_lb=(doc_id,),
+        params_wh=[doc_id],
+    )
     if not rows:
         raise HTTPException(404, "doc not found")
     source_uri, ext = rows[0]["source_uri"], (rows[0]["ext"] or "").lower()
@@ -101,7 +138,12 @@ def get_file(doc_id: str = Query(...)):
 
     # Text-bearing / non-image-doc modalities: serve the parsed text (cleaner than raw bytes).
     if ext in _TEXT_EXTS or ext in {"mp3", "m4a", "mov", "mp4", "3gp"}:
-        t = _sql(f"SELECT text_content FROM {CATALOG}.{SCHEMA}.silver_documents WHERE doc_id = :p0 LIMIT 1", [doc_id])
+        t = _query(
+            sql_lb="SELECT text_content FROM silver_documents WHERE doc_id = %s LIMIT 1",
+            sql_wh=f"SELECT text_content FROM {CATALOG}.{SCHEMA}.silver_documents WHERE doc_id = :p0 LIMIT 1",
+            params_lb=(doc_id,),
+            params_wh=[doc_id],
+        )
         text = (t[0]["text_content"] if t else None) or "(no extracted text for this file)"
         return PlainTextResponse(text)
 
