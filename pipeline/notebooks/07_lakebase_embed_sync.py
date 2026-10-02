@@ -6,7 +6,6 @@
 # MAGIC %run ./00_config
 
 # COMMAND ----------
-import time
 import psycopg
 import mlflow.deployments
 from databricks.sdk import WorkspaceClient
@@ -60,6 +59,7 @@ for i in range(0, len(rows), BATCH):
     resp = deploy.predict(endpoint=EMB_ENDPOINT, inputs={"input": texts})
     embeddings.extend(d["embedding"] for d in resp.data)
 print(f"Generated {len(embeddings)} embeddings")
+assert len(embeddings) == len(rows), f"Embedding count mismatch: {len(embeddings)} != {len(rows)}"
 
 conn = _conn()  # refresh (token may have expired during embedding)
 with conn.cursor() as cur:
