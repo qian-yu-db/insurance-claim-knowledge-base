@@ -7,11 +7,14 @@ Runs as the app service principal when deployed; uses the .env profile locally.
 from __future__ import annotations
 
 import io
+import json
 import os
+from typing import AsyncGenerator
 
 from databricks.sdk import WorkspaceClient
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
+from sse_starlette.sse import EventSourceResponse
 
 CATALOG = "fins_genai"
 SCHEMA = "claims_multimodal_kb"
@@ -68,6 +71,19 @@ def list_claim_docs(claim_id: str) -> list[dict]:
     """, [claim_id])
 
 
+@router.get("/claims/{claim_id}/summary")
+def claim_summary(claim_id: str) -> dict:
+    """Quick summary stats for the claim detail/summary card."""
+    rows = _sql(f"""
+        SELECT claim_id, carrier, peril, insured_name, claimant_name,
+               loss_year, date_of_loss, max_amount_seen, doc_count,
+               loss_location, adjuster_name
+        FROM {CATALOG}.{SCHEMA}.dim_claim
+        WHERE claim_id = :p0
+    """, [claim_id])
+    return rows[0] if rows else {}
+
+
 @router.get("/file")
 def get_file(doc_id: str = Query(...)):
     """Return one document for the viewer, keyed by doc_id.
@@ -103,3 +119,116 @@ def get_file(doc_id: str = Query(...)):
     if ext in _IMAGE_CT:
         return Response(data, media_type=_IMAGE_CT[ext])
     return Response(data, media_type="application/octet-stream")
+
+
+# ---------------------------------------------------------------------------
+# Streaming chat with step visibility
+# ---------------------------------------------------------------------------
+
+@router.post("/chat/stream")
+async def chat_stream(request: Request):
+    """SSE endpoint that streams agent responses with step visibility.
+
+    Retrieval-agnostic: it drives whatever tools the orchestrator agent is
+    configured with (here: Genie + Vector Search + python_exec).
+
+    Emits events:
+      - {"type": "step", "id": "...", "label": "...", "status": "active|done"}
+      - {"type": "delta", "text": "..."}
+      - {"type": "done"}
+    """
+    body = await request.json()
+    messages = body.get("input", [])
+
+    async def event_generator() -> AsyncGenerator[dict, None]:
+        from contextlib import AsyncExitStack
+
+        from agents import Runner
+
+        from agent_server.agent import (
+            build_mcp_servers,
+            connect_healthy_mcp_servers,
+            create_orchestrator_agent,
+        )
+        from agent_server.history import normalize_history_items
+
+        # Step 1: connecting
+        yield {"event": "message", "data": json.dumps(
+            {"type": "step", "id": "connect", "label": "Connecting to data sources", "status": "active"})}
+
+        async with AsyncExitStack() as stack:
+            servers, unavailable = await connect_healthy_mcp_servers(stack, build_mcp_servers())
+            yield {"event": "message", "data": json.dumps(
+                {"type": "step", "id": "connect", "label": "Connecting to data sources", "status": "done"})}
+
+            agent = create_orchestrator_agent(servers, unavailable)
+            normalized = normalize_history_items(messages)
+
+            # Step 2: thinking
+            yield {"event": "message", "data": json.dumps(
+                {"type": "step", "id": "think", "label": "Analyzing your question", "status": "active"})}
+
+            result = Runner.run_streamed(agent, input=normalized)
+            active_tool: str | None = None
+
+            async for event in result.stream_events():
+                if event.type == "raw_response_event":
+                    ed = event.data.model_dump()
+                    evt_type = ed.get("type", "")
+
+                    # Tool call started – emit a step
+                    if evt_type == "response.output_item.added":
+                        item = ed.get("item", {})
+                        if item.get("type") == "function_call":
+                            tool_name = item.get("name", "tool")
+                            label = _tool_label(tool_name)
+                            active_tool = tool_name
+                            # Mark thinking done
+                            yield {"event": "message", "data": json.dumps(
+                                {"type": "step", "id": "think", "label": "Analyzing your question", "status": "done"})}
+                            yield {"event": "message", "data": json.dumps(
+                                {"type": "step", "id": f"tool_{tool_name}", "label": label, "status": "active"})}
+
+                    # Text delta – stream to client
+                    elif evt_type == "response.output_text.delta":
+                        delta = ed.get("delta", "")
+                        if delta:
+                            # Close any active tool step
+                            if active_tool:
+                                yield {"event": "message", "data": json.dumps(
+                                    {"type": "step", "id": f"tool_{active_tool}",
+                                     "label": _tool_label(active_tool), "status": "done"})}
+                                active_tool = None
+                                yield {"event": "message", "data": json.dumps(
+                                    {"type": "step", "id": "think", "label": "Analyzing your question", "status": "done"})}
+                                yield {"event": "message", "data": json.dumps(
+                                    {"type": "step", "id": "respond", "label": "Composing response", "status": "active"})}
+                            yield {"event": "message", "data": json.dumps(
+                                {"type": "delta", "text": delta})}
+
+                elif event.type == "run_item_stream_event":
+                    if hasattr(event, "item") and event.item.type == "tool_call_output_item":
+                        if active_tool:
+                            yield {"event": "message", "data": json.dumps(
+                                {"type": "step", "id": f"tool_{active_tool}",
+                                 "label": _tool_label(active_tool), "status": "done"})}
+                            active_tool = None
+
+            # Final done
+            yield {"event": "message", "data": json.dumps(
+                {"type": "step", "id": "respond", "label": "Composing response", "status": "done"})}
+            yield {"event": "message", "data": json.dumps({"type": "done"})}
+
+    return EventSourceResponse(event_generator())
+
+
+def _tool_label(tool_name: str) -> str:
+    """Human-readable label for the step indicator."""
+    name_lower = tool_name.lower()
+    if "genie" in name_lower or "execute_query" in name_lower:
+        return "Querying structured claims data"
+    if "search" in name_lower or "vector" in name_lower or "retrieve" in name_lower:
+        return "Searching claims documents"
+    if "python" in name_lower or "exec" in name_lower:
+        return "Running calculations"
+    return f"Calling {tool_name}"
