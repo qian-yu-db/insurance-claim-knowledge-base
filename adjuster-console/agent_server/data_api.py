@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import os
 from typing import AsyncGenerator
 
@@ -59,7 +60,6 @@ def _query(sql_lb: str, sql_wh: str, params_lb: tuple | None = None, params_wh: 
         try:
             return lb.query(sql_lb, params_lb)
         except Exception as e:
-            import logging
             logging.getLogger(__name__).warning("Lakebase query failed, falling back to warehouse: %s", e)
     return _sql_warehouse(sql_wh, params_wh)
 

@@ -62,9 +62,9 @@ def search_documents(query: str, claim_id: str | None = None, top_k: int = 10) -
     if not lb.available:
         logger.warning("Lakebase unavailable for hybrid search")
         return []
-    emb_str = "[" + ",".join(f"{v:.8f}" for v in _embed(query)) + "]"
-    sql, params = build_hybrid_sql(emb_str, claim_id, top_k, query_text=query)
     try:
+        emb_str = "[" + ",".join(f"{v:.8f}" for v in _embed(query)) + "]"
+        sql, params = build_hybrid_sql(emb_str, claim_id, top_k, query_text=query)
         with mlflow.start_span(name="hybrid_retriever", span_type="RETRIEVER") as span:
             span.set_inputs({"query": query, "claim_id": claim_id, "top_k": top_k})
             rows = lb.query(sql, params)
