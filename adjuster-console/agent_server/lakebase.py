@@ -16,7 +16,7 @@ _REFRESH_INTERVAL = 40 * 60
 
 class LakebasePool:
     def __init__(self):
-        self._w = WorkspaceClient()
+        self._w = None
         self._endpoint = ""; self._host = ""; self._user = ""; self._token = ""
         self._lock = threading.Lock(); self._initialized = False
 
@@ -30,6 +30,8 @@ class LakebasePool:
             if not PROJECT_ID:
                 logger.warning("LAKEBASE_PROJECT_ID unset; using SQL warehouse fallback")
             return
+        if self._w is None:
+            self._w = WorkspaceClient()
         self._endpoint = f"projects/{PROJECT_ID}/branches/{BRANCH_ID}/endpoints/{ENDPOINT_ID}"
         self._host = self._w.postgres.get_endpoint(name=self._endpoint).status.hosts.host
         self._user = self._w.current_user.me().user_name
