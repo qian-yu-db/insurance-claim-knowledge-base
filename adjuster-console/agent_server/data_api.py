@@ -227,7 +227,7 @@ def _tool_label(tool_name: str) -> str:
     name_lower = tool_name.lower()
     if "genie" in name_lower or "execute_query" in name_lower:
         return "Querying structured claims data"
-    if "search" in name_lower or "vector" in name_lower or "retrieve" in name_lower:
+    if any(k in name_lower for k in ("search", "vector", "retrieve", "vs_index", "chunk", "index")):
         return "Searching claims documents"
     if "python" in name_lower or "exec" in name_lower:
         return "Running calculations"
