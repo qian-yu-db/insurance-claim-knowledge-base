@@ -719,16 +719,22 @@ function renderMarkdown(src) {
 }
 
 function linkifyCitations(html) {
-  // Replace source_uri occurrences
+  // doc_ids already embedded in links by the source_uri pass below — the
+  // second pass must skip these, or it would splice anchors into the onclick
+  // attributes it just created and corrupt the markup.
+  const linkedDocIds = new Set();
+  // Replace source_uri occurrences with clickable filename links
   Object.keys(docsByUri).forEach(uri => {
     if (html.includes(esc(uri)) || html.includes(uri)) {
       const d = docsByUri[uri];
       const link = `<a onclick="openDoc('${d.doc_id}','${d.ext}')">${esc(d.filename)}</a>`;
       html = html.split(esc(uri)).join(link).split(uri).join(link);
+      linkedDocIds.add(d.doc_id);
     }
   });
-  // Replace doc_id UUIDs with clickable filename links
+  // Replace any remaining raw doc_id UUIDs the agent cited directly
   Object.keys(docsByDocId).forEach(docId => {
+    if (linkedDocIds.has(docId)) return;  // already linked via source_uri above
     if (html.includes(docId)) {
       const d = docsByDocId[docId];
       const label = esc(d.filename || d.doc_type || docId);
@@ -755,7 +761,6 @@ async function ask() {
 
   const stepsDiv = document.createElement("div");
   stepsDiv.className = "steps-container";
-  stepsDiv.id = "activeSteps";
   botContainer.appendChild(stepsDiv);
 
   const contentDiv = document.createElement("div");
@@ -774,6 +779,11 @@ async function ask() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ input: history }),
     });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => response.statusText);
+      throw new Error(`chat/stream ${response.status}: ${errText}`);
+    }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -820,8 +830,16 @@ async function ask() {
     }
 
   } catch (e) {
-    // Fallback to non-streaming /invocations
-    await fallbackAsk(contentDiv, stepsDiv, history);
+    if (fullText) {
+      // Streaming failed mid-answer — keep what the user already saw rather
+      // than wiping it, and record it so history stays consistent.
+      console.error("chat/stream error after partial response:", e);
+      stepsDiv.innerHTML = "";
+      history.push({ role: "assistant", content: fullText });
+    } else {
+      // Nothing streamed yet — fall back to non-streaming /invocations
+      await fallbackAsk(contentDiv, stepsDiv, history);
+    }
   } finally {
     $("send").disabled = false;
     $("chat").scrollTop = $("chat").scrollHeight;

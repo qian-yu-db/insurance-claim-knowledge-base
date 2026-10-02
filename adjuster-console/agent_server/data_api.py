@@ -170,6 +170,7 @@ async def chat_stream(request: Request):
 
             result = Runner.run_streamed(agent, input=normalized)
             active_tool: str | None = None
+            answering = False  # flips true on first text delta
 
             async for event in result.stream_events():
                 if event.type == "raw_response_event":
@@ -199,10 +200,15 @@ async def chat_stream(request: Request):
                                     {"type": "step", "id": f"tool_{active_tool}",
                                      "label": _tool_label(active_tool), "status": "done"})}
                                 active_tool = None
+                            # On the first answer text: close "thinking", open "composing".
+                            # Runs whether or not a tool was called, so a direct
+                            # (no-tool) answer still shows a consistent step sequence.
+                            if not answering:
                                 yield {"event": "message", "data": json.dumps(
                                     {"type": "step", "id": "think", "label": "Analyzing your question", "status": "done"})}
                                 yield {"event": "message", "data": json.dumps(
                                     {"type": "step", "id": "respond", "label": "Composing response", "status": "active"})}
+                                answering = True
                             yield {"event": "message", "data": json.dumps(
                                 {"type": "delta", "text": delta})}
 
