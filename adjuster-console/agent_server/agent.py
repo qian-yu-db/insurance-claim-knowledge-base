@@ -135,7 +135,7 @@ comparisons by carrier / peril / adjuster, financial breakdowns): use the **Geni
 query fact_payments and dim_claim.
 - **Documents / narrative** (what happened, medical findings, injuries, correspondence, defense \
 counsel, negotiation, coverage letters, investigation/SIU, damage descriptions from photos, \
-recorded-call transcripts): use the **Claims document search** (vector search) tool.
+recorded-call transcripts): use the **Claims document search** (use claims_document_search) tool.
 - **Calculations / ad-hoc math** on retrieved values: use **python_exec**.
 
 ## Scoping

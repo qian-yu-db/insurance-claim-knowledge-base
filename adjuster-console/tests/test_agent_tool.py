@@ -17,4 +17,6 @@ def test_no_vector_search_mcp():
 
 def test_doc_search_tool_registered():
     from agent_server import agent
-    assert hasattr(agent, "claims_document_search")
+    a = agent.create_orchestrator_agent([], [])
+    names = [getattr(t, "name", getattr(t, "__name__", "")) for t in a.tools]
+    assert "claims_document_search" in names
