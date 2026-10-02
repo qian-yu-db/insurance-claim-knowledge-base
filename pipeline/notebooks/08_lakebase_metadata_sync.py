@@ -30,26 +30,26 @@ SELECTS = {
 }
 
 def load(table):
-    conn = _conn()
-    with conn.cursor() as cur:
-        cur.execute(f"CREATE TABLE IF NOT EXISTS {SCHEMA}.{table} {DDL[table]}")
-        cur.execute(f"TRUNCATE {SCHEMA}.{table}")
-        rows = [r.asDict() for r in spark.sql(SELECTS[table]).collect()]
-        cols = list(rows[0].keys()) if rows else []
-        if rows:
-            ph = ",".join(["%s"] * len(cols))
-            for r in rows:
-                cur.execute(f"INSERT INTO {SCHEMA}.{table} ({','.join(cols)}) VALUES ({ph})",
-                            tuple(r[c] for c in cols))
-    conn.commit()
-    print(f"{table}: {len(rows)} rows")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"CREATE TABLE IF NOT EXISTS {SCHEMA}.{table} {DDL[table]}")
+            cur.execute(f"TRUNCATE {SCHEMA}.{table}")
+            rows = [r.asDict() for r in spark.sql(SELECTS[table]).collect()]
+            cols = list(rows[0].keys()) if rows else []
+            if rows:
+                ph = ",".join(["%s"] * len(cols))
+                for r in rows:
+                    cur.execute(f"INSERT INTO {SCHEMA}.{table} ({','.join(cols)}) VALUES ({ph})",
+                                tuple(r[c] for c in cols))
+        conn.commit()
+        print(f"{table}: {len(rows)} rows")
 
 for t in ("dim_claim", "bronze_file_registry", "silver_documents"):
     load(t)
 # COMMAND ----------
 for t, src in [("dim_claim", T['dim_claim']), ("bronze_file_registry", T['bronze']), ("silver_documents", T['docs'])]:
     uc = spark.sql(f"SELECT count(*) c FROM {src}").collect()[0]["c"]
-    conn = _conn()
-    with conn.cursor() as cur:
-        cur.execute(f"SELECT count(*) FROM {SCHEMA}.{t}"); lb = cur.fetchone()[0]
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT count(*) FROM {SCHEMA}.{t}"); lb = cur.fetchone()[0]
     print(t, "uc:", uc, "lakebase:", lb, "OK" if uc == lb else "MISMATCH")
