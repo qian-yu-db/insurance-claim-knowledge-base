@@ -1,0 +1,75 @@
+# Full rebuild: every table is CREATE OR REPLACE / reloaded, so reruns are safe.
+# Serverless compute (no cluster config). Each notebook %runs 00_config itself.
+#
+# Run as the same identity that granted the app's service principal default
+# privileges on the Lakebase `claims` schema — 07/08 recreate those tables.
+resources:
+  jobs:
+    claims_kb_pipeline:
+      name: claims-kb-pipeline
+
+      # Refresh when new raw files land. Paused by default (and always paused in
+      # dev mode); unpause in the Jobs UI or set pause_status: UNPAUSED for prod.
+      trigger:
+        pause_status: PAUSED
+        file_arrival:
+          url: /Volumes/fins_genai/claims_multimodal_kb/landing/claims/
+          min_time_between_triggers_seconds: 3600
+          wait_after_last_change_seconds: 600
+
+      max_concurrent_runs: 1
+
+      tasks:
+        - task_key: bronze_ingest
+          notebook_task:
+            notebook_path: ../notebooks/01_bronze_ingest.py
+
+        - task_key: silver_parse_text
+          depends_on:
+            - task_key: bronze_ingest
+          notebook_task:
+            notebook_path: ../notebooks/02_silver_parse_text.py
+
+        - task_key: silver_image_caption
+          depends_on:
+            - task_key: silver_parse_text
+          notebook_task:
+            notebook_path: ../notebooks/03_silver_image_caption.py
+
+        # ai_transcribe variant (handles m4a); swap to 03c_silver_audio.py for Whisper.
+        - task_key: silver_audio
+          depends_on:
+            - task_key: bronze_ingest
+          notebook_task:
+            notebook_path: ../notebooks/03c_silver_audio_ai_transcribe.py
+
+        - task_key: silver_documents
+          depends_on:
+            - task_key: silver_image_caption
+            - task_key: silver_audio
+          notebook_task:
+            notebook_path: ../notebooks/04_silver_documents.py
+
+        - task_key: structured_facts
+          depends_on:
+            - task_key: silver_documents
+          notebook_task:
+            notebook_path: ../notebooks/05_structured_facts.py
+
+        - task_key: gold_chunks
+          depends_on:
+            - task_key: silver_documents
+          notebook_task:
+            notebook_path: ../notebooks/06_gold_chunks.py
+
+        - task_key: lakebase_embed_sync
+          depends_on:
+            - task_key: gold_chunks
+          notebook_task:
+            notebook_path: ../notebooks/07_lakebase_embed_sync.py
+
+        - task_key: lakebase_metadata_sync
+          depends_on:
+            - task_key: structured_facts
+          notebook_task:
+            notebook_path: ../notebooks/08_lakebase_metadata_sync.py

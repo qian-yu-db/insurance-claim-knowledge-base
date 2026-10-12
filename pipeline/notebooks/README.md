@@ -90,6 +90,17 @@ range filters; don't use free text as a filter.
 
 ## Running
 
+**As a Lakeflow Job (recommended):** `pipeline/databricks.yml` defines `claims-kb-pipeline`, a serverless
+job wiring 01 → 08 with the dependencies above. It uses the `ai_transcribe` variant of 03c.
+```bash
+cd pipeline
+databricks bundle deploy -t dev --profile <profile>
+databricks bundle run claims_kb_pipeline -t dev --profile <profile>
+```
+The job has a file-arrival trigger on the landing Volume, so it can refresh the knowledge base when raw
+files change. The trigger ships **paused**; unpause it in the Jobs UI once you're happy with the job.
+Run the job as the identity that owns the Lakebase `claims` tables, so the app's grants keep applying.
+
 Interactively: open `00_config`, set widgets, then run 01→08 in order. As a Job: create one task per
 notebook with the dependencies above; all share the same widget values (set as job parameters). Compute
 must provide `ai_parse_document` (DBR 17.3+) and `ai_prep_search` (DBR 18.2+) — a serverless SQL
