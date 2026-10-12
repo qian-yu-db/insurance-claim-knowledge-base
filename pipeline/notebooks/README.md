@@ -45,7 +45,7 @@ Re-run 07 and 08 whenever the raw data changes. They fully reload their Lakebase
 | Widget | Default | Notes |
 |---|---|---|
 | `catalog` / `schema` | `fins_genai` / `claims_multimodal_kb` | where tables + index are created |
-| `landing_path` | `/Volumes/fins_genai/claims_multimodal_kb/landing/claims` | raw files (78, incl. 6 audio) |
+| `landing_path` | `/Volumes/fins_genai/claims_multimodal_kb/landing/claims` | raw files (66, incl. 6 audio) |
 | `embedding_endpoint` | `databricks-gte-large-en` | index embeddings |
 | `vision_endpoint` | `databricks-llama-4-maverick` | image captions |
 | `email_endpoint` | `databricks-claude-haiku-4-5` | `.eml` body cleanup |

@@ -14,7 +14,7 @@ All data is **synthetic**. Damage photos are DALL·E-generated fakes from the
 | Claim | Profile | Highlights |
 |-------|---------|-----------|
 | `CLM-2026-04412` | Minor collision, fast-track | Small bundle: FNOL, short adjuster report, `ok`/`minor` photos, XLSX estimate, quick settlement, claimant voicemail. |
-| `CLM-2026-04487` | Major collision + bodily injury + litigation | Heavyweight: **109-page** combined medical/legal PDF (with embedded scanned pages), defense-counsel & negotiation email threads, ACORD form, coverage letter + release (`.docx`), `major` damage photos, HEIC held-in-hand doc photo, recorded statement (`.m4a`). |
+| `CLM-2026-04487` | Major collision + bodily injury + litigation | Heavyweight: **109-page** combined medical/legal PDF (with embedded scanned pages), defense-counsel & negotiation email threads, ACORD form, coverage letter + release (`.docx`), `major` damage photos, recorded statement (`.m4a`). |
 | `CLM-2026-04531` | Moderate collision, disputed cause | SIU investigation: email whose attachments include one file **also in the folder** (repair estimate) and one **attachment-only** file (`SIU_field_photo_log.pdf`, never filed in the folder), plus RTF note, TIFF scan. |
 
 ## Layout
@@ -28,18 +28,22 @@ claims/
     ├── manifest.json         # per-claim artifact manifest
     ├── correspondence/       # .eml (inline signature GIF, attachments)
     ├── documents/            # .pdf, .docx, .rtf
-    ├── images/               # damage photos (jpg/png/heic/tiff), scans, signature gif
+    ├── images/               # damage photos (jpg/png), scans (tiff)
     ├── structured/           # .xlsx, .csv, .html, .xml, .json
     └── audio/                # .mp3, .m4a
 ```
 
-## Format coverage (69 artifacts)
+## Format coverage (60 artifacts)
 
 - **Documents:** PDF (incl. 100+ page mixed bundle), DOCX, RTF, DOT template
 - **Email:** EML (attachments in-folder vs. attachment-only; inline signature graphic)
-- **Images:** JPG, PNG, HEIC, TIFF, GIF (damage photos, scanned docs, held-in-hand phone photo, email signature)
+- **Images:** JPG, PNG (damage photos), TIFF (scanned docs)
 - **Audio:** MP3 (reused policy-narration calls + TTS voicemail), M4A (TTS recorded statement / SIU note)
 - **Structured / long-tail:** XLSX, CSV, HTML (vendor appraisal), XML + JSON (metadata)
+
+HEIC and GIF images, TIFF damage photos, and video (MOV/MP4/3GP) were removed from the set. The pipeline
+can't turn them into searchable text: the captioning model only accepts JPEG/PNG, and there's no video
+step. Keeping them made the app's file browser list files the knowledge base couldn't answer from.
 
 ## Design decisions worth knowing
 
