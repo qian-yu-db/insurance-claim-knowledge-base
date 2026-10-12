@@ -20,7 +20,6 @@ dbutils.widgets.text("embedding_endpoint", "databricks-gte-large-en", "Embedding
 dbutils.widgets.text("vision_endpoint", "databricks-llama-4-maverick", "Vision endpoint (image captions)")
 dbutils.widgets.text("email_endpoint", "databricks-claude-haiku-4-5", "LLM endpoint (email body cleanup)")
 dbutils.widgets.text("audio_endpoint", "whisper-large-v3", "Audio transcription endpoint (Whisper)")
-dbutils.widgets.text("vs_endpoint", "", "Vector Search endpoint (required in nb 07)")
 dbutils.widgets.dropdown("pii_mask", "off", ["off", "sensitive_only"], "PII masking policy")
 dbutils.widgets.text("lakebase_project_id", "insurance-claim", "Lakebase project id")
 dbutils.widgets.text("lakebase_branch_id", "production", "Lakebase branch")
@@ -31,7 +30,7 @@ dbutils.widgets.text("lakebase_schema", "claims", "Lakebase schema")
 # COMMAND ----------
 CFG = {k: dbutils.widgets.get(k) for k in (
     "catalog", "schema", "landing_path", "embedding_endpoint",
-    "vision_endpoint", "email_endpoint", "audio_endpoint", "vs_endpoint", "pii_mask")}
+    "vision_endpoint", "email_endpoint", "audio_endpoint", "pii_mask")}
 
 _lb_proj = dbutils.widgets.get("lakebase_project_id")
 _lb_branch = dbutils.widgets.get("lakebase_branch_id")

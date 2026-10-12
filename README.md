@@ -11,11 +11,11 @@ Everything here is **synthetic**. It is meant as a blueprint you adapt to your o
 | Component | Path | What it is |
 |---|---|---|
 | **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | Ready-to-use synthetic test set: 3 internally-consistent auto-collision claims (69 artifacts across modalities) + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). Bring your own claim data for production. |
-| **Batch pipeline** | [`pipeline/notebooks/`](pipeline/notebooks/) | Medallion pipeline (Bronze → Silver → Gold → Vector Search) built on Databricks AI Functions. See its [README](pipeline/notebooks/README.md). |
+| **Batch pipeline** | [`pipeline/notebooks/`](pipeline/notebooks/) | Medallion pipeline (Bronze → Silver → Gold → Lakebase hybrid search index) built on Databricks AI Functions. See its [README](pipeline/notebooks/README.md). |
 | **Genie space** | [`genie/`](genie/) | Exported config + import script for the Genie space over the structured facts (`dim_claim`, `fact_payments`) that the app routes fact/aggregation questions to. See its [README](genie/README.md). |
 | **Adjuster console app** | [`adjuster-console/`](adjuster-console/) | FastAPI + vanilla-JS 2-pane app (doc/image/transcript viewer + grounded chat), deployed to Databricks Apps. |
 | **Architecture** | [`docs/claims_kb_architecture.md`](docs/claims_kb_architecture.md) | Diagram + design notes. |
-| **Data residency** | [`docs/data_residency.md`](docs/data_residency.md) | Where each asset lives (customer storage vs Databricks-managed) + Vector Search custody options. |
+| **Data residency** | [`docs/data_residency.md`](docs/data_residency.md) | Where each asset lives (customer storage vs Databricks-managed) + Vector Search custody options (V1 retrieval). |
 | **Design options & scaling** | [`docs/design_options_and_scaling.md`](docs/design_options_and_scaling.md) | How to expand the default: index structure, scaling for large data, more categories/modalities. |
 
 ## Architecture at a glance
@@ -29,7 +29,7 @@ flowchart TB
         BRONZE["Bronze<br/>ingest + route by modality"]
         SILVER["Silver<br/>parse / caption / transcribe → documents"]
         GOLD["Gold<br/>semantic chunks"]
-        VS["Vector Search index<br/>unstructured KB"]
+        VS["Lakebase Postgres<br/>chunk embeddings + ANN/BM25 indexes<br/>+ app metadata"]
         FACTS["dim_claim + fact_payments<br/>Delta — structured facts"]
         BRONZE --> SILVER
         SILVER --> GOLD --> VS
@@ -46,7 +46,8 @@ flowchart TB
     end
 
     RAW --> BRONZE
-    ORCH -->|"docs (MCP)"| VS
+    ORCH -->|"docs (hybrid search tool)"| VS
+    VIEW -. metadata .-> VS
     ORCH -->|"facts (MCP)"| GENIE["Genie space"]
     GENIE --> FACTS
     ORCH -->|"math (MCP)"| PY["python_exec"]
@@ -56,13 +57,15 @@ flowchart TB
 - **AI Functions used:** `ai_parse_document`, `ai_classify`, `ai_extract`, `ai_prep_search`, and
   audio transcription via **`ai_transcribe`** (preferred — built-in, speaker diarization) or `ai_query`
   against a Whisper endpoint (the two `03c_*` notebooks are alternatives — run one).
-- **Retrieval:** hybrid Vector Search over chunked, metadata-tagged documents; exact aggregation over the
+- **Retrieval:** hybrid search in Lakebase Postgres over chunked, metadata-tagged documents (vector ANN +
+  BM25, fused with Reciprocal Rank Fusion), run in-process by the app's `claims_document_search` tool; exact aggregation over the
   payment ledger stays in Delta and is answered by a Genie space (semantic search over a ledger is weak).
 
 ## Quickstart
 
-**Pipeline** — import `pipeline/notebooks/` into your workspace and run `00_config` → `07` on a
-DBR 18.2+ / serverless-env-v3+ cluster (see the [notebooks README](pipeline/notebooks/README.md) for
+**Pipeline** — import `pipeline/notebooks/` into your workspace and run `00_config` → `08` on a
+DBR 18.2+ / serverless-env-v3+ cluster. Notebooks 07–08 need a Lakebase project with **Lakebase Search
+enabled and its compute restarted** (see the [notebooks README](pipeline/notebooks/README.md) for
 prerequisites and the AI-function version requirements).
 
 **Genie space** — the app depends on it for structured/fact questions. Create it before deploying the app:
@@ -86,16 +89,19 @@ swap them for your own values before deploying:
 
 | Where | What to replace |
 |---|---|
-| `adjuster-console/databricks.yml` | Genie `space_id`, `sql_warehouse` / `warehouse_id`, `experiment_id`, serving-endpoint name, the `fins_genai.claims_multimodal_kb` catalog/schema and Vector Search index |
-| `adjuster-console/agent_server/agent.py` | `GENIE_SPACE_ID`, `VS_CATALOG` / `VS_SCHEMA` / `VS_INDEX`, `MODEL` |
+| `adjuster-console/databricks.yml` | Genie `space_id`, `sql_warehouse` / `warehouse_id`, `experiment_id`, serving-endpoint name, the `fins_genai.claims_multimodal_kb` catalog/schema, and the Lakebase `LAKEBASE_*` env vars + `postgres` resource |
+| `adjuster-console/agent_server/agent.py` | `GENIE_SPACE_ID`, `MODEL` |
 | `adjuster-console/agent_server/data_api.py` | `CATALOG` / `SCHEMA` (and the landing-Volume prefix) |
-| `pipeline/notebooks/00_config.py` | catalog/schema, volume path, endpoint names |
+| `pipeline/notebooks/00_config.py` | catalog/schema, volume path, endpoint names, Lakebase project/branch/endpoint |
 
 `uv run quickstart` regenerates `.env` (git-ignored) and the MLflow experiment for your workspace.
 
 ## Notes
 
 - No credentials are committed. `.env`, `.venv/`, and `.databricks/` are git-ignored.
+- `adjuster-console/uv.lock` must resolve from **public PyPI**. The Databricks Apps build can't reach private or
+  internal package mirrors. If your local uv config uses a private index, re-point the lock's URLs before deploying.
+- Releases: `v1.x` uses Databricks Vector Search (AI Search) for retrieval; `v2.x` uses Lakebase hybrid search.
 - Local dev uses [`uv`](https://docs.astral.sh/uv/). After cloning, run `uv sync` in `adjuster-console/`.
 - The `sample_data/claims/` set is synthetic and provided as-is for testing; the generator used to
   create it is kept local-only (not part of this repo).
