@@ -10,7 +10,7 @@ Everything here is **synthetic**. It is meant as a blueprint you adapt to your o
 
 | Component | Path | What it is |
 |---|---|---|
-| **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | Ready-to-use synthetic test set: 3 internally-consistent auto-collision claims (69 artifacts across modalities) + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). Bring your own claim data for production. |
+| **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | Ready-to-use synthetic test set: 3 internally-consistent auto-collision claims (60 artifacts across modalities) + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). Bring your own claim data for production. |
 | **Batch pipeline** | [`pipeline/notebooks/`](pipeline/notebooks/) | Medallion pipeline (Bronze → Silver → Gold → Vector Search) built on Databricks AI Functions. See its [README](pipeline/notebooks/README.md). |
 | **Genie space** | [`genie/`](genie/) | Exported config + import script for the Genie space over the structured facts (`dim_claim`, `fact_payments`) that the app routes fact/aggregation questions to. See its [README](genie/README.md). |
 | **Adjuster console app** | [`adjuster-console/`](adjuster-console/) | FastAPI + vanilla-JS 2-pane app (doc/image/transcript viewer + grounded chat), deployed to Databricks Apps. |
