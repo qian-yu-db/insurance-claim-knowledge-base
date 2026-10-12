@@ -21,7 +21,8 @@ DDL = {
  "bronze_file_registry": """(doc_id TEXT PRIMARY KEY, source_uri TEXT, claim_id TEXT, filename TEXT,
    ext TEXT, size_bytes BIGINT, modified_at TIMESTAMP, ingested_at TIMESTAMP, modality TEXT,
    route TEXT, corpus TEXT)""",
- "silver_documents": """(doc_id TEXT PRIMARY KEY, doc_type TEXT, content_source TEXT, text_content TEXT)""",
+ "silver_documents": """(doc_id TEXT, doc_type TEXT, content_source TEXT, text_content TEXT,
+        PRIMARY KEY (doc_id, content_source))""",  # one row per (doc, source): parsed + vision_caption
 }
 SELECTS = {
  "dim_claim": f"SELECT claim_id, carrier, peril, policy_number, insured_name, claimant_name, date_of_loss, loss_year, loss_location, adjuster_name, max_amount_seen, doc_count, distinct_doc_types FROM {T['dim_claim']}",
