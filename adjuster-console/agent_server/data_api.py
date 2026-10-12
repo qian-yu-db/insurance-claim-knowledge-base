@@ -79,18 +79,24 @@ def list_claims() -> list[dict]:
 
 @router.get("/claims/{claim_id}/docs")
 def list_claim_docs(claim_id: str) -> list[dict]:
-    """Every viewable artifact for a claim (drives the document explorer)."""
+    """Every viewable artifact for a claim (drives the document explorer).
+
+    silver_documents can hold several rows per doc (parsed + vision_caption), so it
+    is collapsed to one row per doc_id before the join to avoid duplicate entries.
+    """
     return _query(
         sql_lb="""SELECT b.doc_id, b.filename, b.ext, b.modality, b.source_uri, b.size_bytes,
                          s.doc_type, s.content_source
                   FROM bronze_file_registry b
-                  LEFT JOIN silver_documents s ON b.doc_id = s.doc_id
+                  LEFT JOIN (SELECT doc_id, MAX(doc_type) AS doc_type, MIN(content_source) AS content_source
+                             FROM silver_documents GROUP BY doc_id) s ON b.doc_id = s.doc_id
                   WHERE b.claim_id = %s AND b.route <> 'skip'
                   ORDER BY b.modality, b.filename""",
         sql_wh=f"""SELECT b.doc_id, b.filename, b.ext, b.modality, b.source_uri, b.size_bytes,
                           s.doc_type, s.content_source
                    FROM {CATALOG}.{SCHEMA}.bronze_file_registry b
-                   LEFT JOIN {CATALOG}.{SCHEMA}.silver_documents s ON b.doc_id = s.doc_id
+                   LEFT JOIN (SELECT doc_id, MAX(doc_type) AS doc_type, MIN(content_source) AS content_source
+                              FROM {CATALOG}.{SCHEMA}.silver_documents GROUP BY doc_id) s ON b.doc_id = s.doc_id
                    WHERE b.claim_id = :p0 AND b.route <> 'skip'
                    ORDER BY b.modality, b.filename""",
         params_lb=(claim_id,),
