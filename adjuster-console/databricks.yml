@@ -27,7 +27,7 @@ resources:
       resources:
         - name: 'experiment'
           experiment:
-            experiment_id: "2456186449359403"
+            experiment_id: "36011563977929"
             permission: 'CAN_MANAGE'
 
         # Genie space — structured claims data (fact_payments, dim_claim)
