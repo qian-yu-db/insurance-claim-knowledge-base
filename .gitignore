@@ -34,3 +34,7 @@ __pycache__/
 # mp3s are kept locally
 /generator/
 /sample_data/*.mp3
+
+# --- Superpowers (agent planning workflow): specs, plans, scratch — kept local, not published ---
+docs/superpowers/
+.superpowers/
