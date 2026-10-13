@@ -30,23 +30,36 @@ SELECTS = {
  "silver_documents": f"SELECT doc_id, doc_type, content_source, text_content FROM {T['docs']}",
 }
 
-def load(table):
-    with _conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(f"CREATE TABLE IF NOT EXISTS {SCHEMA}.{table} {DDL[table]}")
-            cur.execute(f"TRUNCATE {SCHEMA}.{table}")
-            rows = [r.asDict() for r in spark.sql(SELECTS[table]).collect()]
-            cols = list(rows[0].keys()) if rows else []
-            if rows:
-                ph = ",".join(["%s"] * len(cols))
-                for r in rows:
-                    cur.execute(f"INSERT INTO {SCHEMA}.{table} ({','.join(cols)}) VALUES ({ph})",
-                                tuple(r[c] for c in cols))
-        conn.commit()
-        print(f"{table}: {len(rows)} rows")
+TABLES = ("dim_claim", "bronze_file_registry", "silver_documents")
 
-for t in ("dim_claim", "bronze_file_registry", "silver_documents"):
-    load(t)
+def load_staging(cur, table):
+    # Recreated every run so DDL changes always apply; the live table keeps serving reads meanwhile.
+    stage = f"{SCHEMA}.{table}_staging"
+    cur.execute(f"DROP TABLE IF EXISTS {stage}")
+    cur.execute(f"CREATE TABLE {stage} {DDL[table]}")
+    rows = [r.asDict() for r in spark.sql(SELECTS[table]).collect()]
+    if rows:
+        cols = list(rows[0].keys())
+        cur.executemany(f"INSERT INTO {stage} ({','.join(cols)}) VALUES ({','.join(['%s'] * len(cols))})",
+                        [tuple(r[c] for c in cols) for r in rows])
+    print(f"{table}: {len(rows)} rows staged")
+
+with _conn() as conn:
+    with conn.cursor() as cur:
+        cur.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}")
+        for t in TABLES:
+            load_staging(cur, t)
+    conn.commit()
+
+# Swap all three in one transaction, so the app never sees a half-loaded or mismatched set.
+with _conn() as conn:
+    with conn.cursor() as cur:
+        for t in TABLES:
+            cur.execute(f"DROP TABLE IF EXISTS {SCHEMA}.{t}")
+            cur.execute(f"ALTER TABLE {SCHEMA}.{t}_staging RENAME TO {t}")
+            cur.execute(f"ALTER INDEX {SCHEMA}.{t}_staging_pkey RENAME TO {t}_pkey")
+    conn.commit()
+print("Swapped staging tables into place.")
 # COMMAND ----------
 for t, src in [("dim_claim", T['dim_claim']), ("bronze_file_registry", T['bronze']), ("silver_documents", T['docs'])]:
     uc = spark.sql(f"SELECT count(*) c FROM {src}").collect()[0]["c"]

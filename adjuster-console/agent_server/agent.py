@@ -31,7 +31,7 @@ from mlflow.types.responses import (
 )
 
 from agent_server.history import normalize_history_items
-from agent_server.lakebase_search import search_documents
+from agent_server.lakebase_search import SearchUnavailable, search_documents
 from agent_server.utils import (
     build_mcp_url,
     get_session_id,
@@ -115,7 +115,16 @@ def claims_document_search(query: str, claim_id: str = "") -> str:
         query: Natural language search query.
         claim_id: Optional claim number to restrict results to one claim.
     """
-    results = search_documents(query=query, claim_id=claim_id or None, top_k=10)
+    return run_document_search(query, claim_id)
+
+
+def run_document_search(query: str, claim_id: str = "") -> str:
+    """Tool body, kept separate from the @function_tool wrapper so it can be tested directly."""
+    try:
+        results = search_documents(query=query, claim_id=claim_id or None, top_k=10)
+    except SearchUnavailable:
+        return ("UNAVAILABLE: the claims document search is temporarily unavailable. Do not conclude "
+                "that documents are missing; tell the user document search could not be reached.")
     if not results:
         return "No matching documents found."
     return json.dumps(results, default=str)

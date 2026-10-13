@@ -57,7 +57,6 @@ CFG["t"] = {                                            # table names
     "fact_pay": f"{C}.{S}.fact_payments",
     "gold":     f"{C}.{S}.gold_chunks",
 }
-CFG["index_name"] = f"{C}.{S}.gold_chunks_vs_index"
 
 
 def run_sql(sql: str):

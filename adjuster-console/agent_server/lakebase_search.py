@@ -15,6 +15,10 @@ RRF_K = 60
 _deploy = None
 
 
+class SearchUnavailable(RuntimeError):
+    """Lakebase or the embedding endpoint failed; distinct from a search with no matches."""
+
+
 def _embed(text: str) -> list[float]:
     global _deploy
     if _deploy is None:
@@ -26,17 +30,20 @@ def build_hybrid_sql(emb_str: str, claim_id: str | None, top_k: int, query_text:
     candidate_k = top_k * 3
     bm25 = f"g.chunk_tsv <@> to_bm25query(to_tsvector('english', %s), '{BM25_INDEX}'::regclass)"
     if claim_id:
-        vector_where = "WHERE g.claim_id = %s"
+        # Exact search within the claim: the ANN index filters *after* its approximate top-k,
+        # so a WHERE on claim_id could leave a small claim with few or no vector candidates.
+        vector_source = (f"(SELECT g.chunk_id, g.embedding FROM {SCHEMA}.{TABLE} g "
+                         f"WHERE g.claim_id = %s OFFSET 0)")  # OFFSET 0 keeps the filter ahead of the sort
         text_and_claim = "AND g.claim_id = %s"
         params: tuple = (claim_id, query_text, query_text, claim_id, query_text)
     else:
-        vector_where = ""
+        vector_source = f"{SCHEMA}.{TABLE}"
         text_and_claim = ""
         params = (query_text, query_text, query_text)
     sql = f"""
     WITH vector_cte AS (
         SELECT g.chunk_id, ROW_NUMBER() OVER (ORDER BY g.embedding <=> '{emb_str}'::vector ASC) AS vrank
-        FROM {SCHEMA}.{TABLE} g {vector_where}
+        FROM {vector_source} g
         ORDER BY g.embedding <=> '{emb_str}'::vector ASC LIMIT {candidate_k}
     ),
     text_cte AS (
@@ -59,9 +66,9 @@ def build_hybrid_sql(emb_str: str, claim_id: str | None, top_k: int, query_text:
 
 
 def search_documents(query: str, claim_id: str | None = None, top_k: int = 10) -> list[dict]:
+    """Hybrid search. Returns [] when nothing matches; raises SearchUnavailable on failure."""
     if not lb.available:
-        logger.warning("Lakebase unavailable for hybrid search")
-        return []
+        raise SearchUnavailable("Lakebase is not reachable")
     try:
         emb_str = "[" + ",".join(f"{v:.8f}" for v in _embed(query)) + "]"
         sql, params = build_hybrid_sql(emb_str, claim_id, top_k, query_text=query)
@@ -80,4 +87,4 @@ def search_documents(query: str, claim_id: str | None = None, top_k: int = 10) -
         return results
     except Exception as e:
         logger.error("Lakebase hybrid search failed: %s", e)
-        return []
+        raise SearchUnavailable(str(e)) from e
