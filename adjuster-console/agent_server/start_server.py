@@ -1,4 +1,5 @@
 # Modified from databricks/app-templates (agent-openai-agents-sdk-multiagent); see LICENSE and NOTICE.
+import logging
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -10,6 +11,11 @@ load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=True)
 # Need to import the agent to register the functions with the server
 import agent_server.agent  # noqa: E402
 from agent_server.data_api import router as data_router  # noqa: E402
+from agent_server.lakebase import pool as lakebase_pool  # noqa: E402
+try:
+    lakebase_pool.initialize()
+except Exception:
+    logging.getLogger(__name__).warning("Lakebase init failed; using SQL warehouse fallback", exc_info=True)
 
 agent_server = AgentServer("ResponsesAgent", enable_chat_proxy=True)
 # Define the app as a module level variable to enable multiple workers

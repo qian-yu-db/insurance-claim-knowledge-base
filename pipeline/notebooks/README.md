@@ -1,7 +1,7 @@
 # Claims Multi-Modal KB — Default Workflow Notebooks
 
 A parameterized, medallion batch workflow that turns a UC Volume of raw claim artifacts into a
-**Vector Search index** for an adjuster knowledge base, plus **structured fact tables** for SQL/Genie.
+**Lakebase hybrid search index** (pgvector-compatible ANN + BM25) for an adjuster knowledge base, plus **structured fact tables** for SQL/Genie.
 Implements the default architecture in [`../../docs/claims_kb_architecture.md`](../../docs/claims_kb_architecture.md).
 
 ## Notebook order (→ Job DAG)
@@ -16,22 +16,42 @@ Implements the default architecture in [`../../docs/claims_kb_architecture.md`](
 | 04 | `04_silver_documents` | unify + `ai_classify` + `ai_extract` + **metadata columns** | 02, 03, 03c |
 | 05 | `05_structured_facts` | `fact_payments`, `dim_claim` (Delta for SQL/Genie) | 04 |
 | 06 | `06_gold_chunks` | `ai_prep_search` chunks + metadata propagation | 04 |
-| 07 | `07_vector_search_index` | Delta Sync index + filtered hybrid query | 06 |
+| 07 | `07_lakebase_embed_sync` | embed `gold_chunks` → Lakebase `claims.gold_chunks_embeddings` + ANN/BM25 indexes | 06 |
+| 08 | `08_lakebase_metadata_sync` | copy `dim_claim`, `bronze_file_registry`, `silver_documents` → Lakebase `claims` schema | 04, 05 |
 
 Run 02 before 03 (03 reads 02's parse output to find no-text images); 03c is independent of 02/03.
-05 and 06 can run in parallel after 04. As a Lakeflow Job, wire tasks with these dependencies.
+05 and 06 can run in parallel after 04; 07 and 08 are independent of each other.
+Re-run 07 and 08 whenever the raw data changes. They fully reload their Lakebase tables. As a Lakeflow Job, wire tasks with these dependencies.
+
+## Lakebase prerequisites (nb 07, 08)
+
+1. A Lakebase Autoscaling project (default `insurance-claim`).
+2. **Enable Lakebase Search on the project, then restart its compute.** In the Lakebase UI, open the
+   project's **Settings** and turn on **Lakebase Search**. Then restart the `primary` compute under
+   **Branches → production → Computes**. The setting only takes effect after a restart. Until then,
+   `CREATE EXTENSION lakebase_vector` fails with
+   `lakebase_vector must be loaded via shared_preload_libraries`. Check with
+   `SHOW shared_preload_libraries;` — it should include `lakebase_vector,lakebase_text`.
+3. After deploying the app, grant its service principal read access (run as the project owner):
+   ```sql
+   GRANT USAGE ON SCHEMA claims TO "<APP_SP_CLIENT_ID>";
+   GRANT SELECT ON ALL TABLES IN SCHEMA claims TO "<APP_SP_CLIENT_ID>";
+   ALTER DEFAULT PRIVILEGES IN SCHEMA claims GRANT SELECT ON TABLES TO "<APP_SP_CLIENT_ID>";
+   ```
+   The default privileges cover the tables that 07/08 drop and recreate on each run.
 
 ## Parameters (widgets in `00_config`)
 
 | Widget | Default | Notes |
 |---|---|---|
 | `catalog` / `schema` | `fins_genai` / `claims_multimodal_kb` | where tables + index are created |
-| `landing_path` | `/Volumes/fins_genai/claims_multimodal_kb/landing/claims` | raw files (78, incl. 6 audio) |
+| `landing_path` | `/Volumes/fins_genai/claims_multimodal_kb/landing/claims` | raw files (66, incl. 6 audio) |
 | `embedding_endpoint` | `databricks-gte-large-en` | index embeddings |
 | `vision_endpoint` | `databricks-llama-4-maverick` | image captions |
 | `email_endpoint` | `databricks-claude-haiku-4-5` | `.eml` body cleanup |
 | `audio_endpoint` | `whisper-large-v3` | Whisper transcription (nb 03c) |
-| `vs_endpoint` | *(empty — set before nb 07)* | Vector Search endpoint |
+| `lakebase_project_id` / `lakebase_branch_id` / `lakebase_endpoint_id` | `insurance-claim` / `production` / `primary` | Lakebase target (nb 07, 08) |
+| `lakebase_database` / `lakebase_schema` | `databricks_postgres` / `claims` | Lakebase database + schema |
 | `pii_mask` | `off` | `sensitive_only` masks SSN/bank/CC (keeps names/claim#) |
 
 Defaults target **`fevm-classic-stable`** (`fins_genai.claims_multimodal_kb`) where the data and the
@@ -42,13 +62,13 @@ Defaults target **`fevm-classic-stable`** (`fins_genai.claims_multimodal_kb`) wh
 ## Metadata columns (the design)
 
 The whole point of the metadata is retrieval control. Columns are built in **nb 04** (typed) and carried
-onto every chunk in **nb 06** (Vector Search filters operate at chunk granularity), then synced to the
-index in **nb 07**.
+onto every chunk in **nb 06** (search filters operate at chunk granularity), then embedded and loaded
+into Lakebase in **nb 07**.
 
 - **Filters (hard predicates, applied before ranking):** `claim_id`, `corpus`, `doc_type`, `modality`,
   `content_source`, `carrier`, `peril`, `loss_year` (INT range), `policy_number`.
-- **Hybrid search:** `query_type="HYBRID"` blends vector similarity with keyword/BM25 over the chunk
-  text — catches exact tokens (policy numbers, names, "L4-L5") pure semantics miss. It does **not**
+- **Hybrid search:** the app fuses a vector (`lakebase_ann`, cosine) ranking with a BM25 (`lakebase_bm25`)
+  ranking over the chunk text using Reciprocal Rank Fusion (k=60) — catches exact tokens (policy numbers, names, "L4-L5") pure semantics miss. It does **not**
   search metadata columns; those are for filtering/faceting.
 - **Provenance & governance:** `source_uri`, `filename`, `chunk_position` (cite/deep-link), `pii_masked`,
   `content_source` (flags model-generated captions vs. parsed text), `ingested_at`.
@@ -60,7 +80,7 @@ range filters; don't use free text as a filter.
 
 - **Built & validated:** parse/OCR, text/email extraction, **vision image captions** (confirmed on a
   damage photo), classify + expanded extract, metadata engineering, structured facts (CSV read
-  confirmed), `ai_prep_search` chunking, Delta Sync index with metadata + hybrid query.
+  confirmed), `ai_prep_search` chunking, Lakebase embeddings + ANN/BM25 indexes + hybrid query.
 - **Audio transcription (nb 03c) — validated** against the live `whisper-large-v3` endpoint:
   `{"dataframe_split": {"data": [["<b64>"]]}}` → `{"predictions": ["<transcript>"]}`. **mp3 works,
   including multi-minute files** (5.5-min call → ~44s, server-side chunking). **m4a/AAC is not decodable
@@ -70,7 +90,18 @@ range filters; don't use free text as a filter.
 
 ## Running
 
-Interactively: open `00_config`, set widgets, then run 01→07 in order. As a Job: create one task per
+**As a Lakeflow Job (recommended):** `pipeline/databricks.yml` defines `claims-kb-pipeline`, a serverless
+job wiring 01 → 08 with the dependencies above. It uses the `ai_transcribe` variant of 03c.
+```bash
+cd pipeline
+databricks bundle deploy -t dev --profile <profile>
+databricks bundle run claims_kb_pipeline -t dev --profile <profile>
+```
+The job has a file-arrival trigger on the landing Volume, so it can refresh the knowledge base when raw
+files change. The trigger ships **paused**; unpause it in the Jobs UI once you're happy with the job.
+Run the job as the identity that owns the Lakebase `claims` tables, so the app's grants keep applying.
+
+Interactively: open `00_config`, set widgets, then run 01→08 in order. As a Job: create one task per
 notebook with the dependencies above; all share the same widget values (set as job parameters). Compute
 must provide `ai_parse_document` (DBR 17.3+) and `ai_prep_search` (DBR 18.2+) — a serverless SQL
 warehouse or matching cluster.

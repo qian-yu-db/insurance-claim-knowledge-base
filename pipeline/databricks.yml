@@ -1,0 +1,20 @@
+# Lakeflow Job for the claims knowledge-base pipeline (notebooks 01 → 08).
+#   databricks bundle deploy -t dev --profile <profile>
+#   databricks bundle run claims_kb_pipeline -t dev --profile <profile>
+bundle:
+  name: claims_kb_pipeline
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    # workspace:
+    #   host: https://...
+
+  prod:
+    mode: production
+    # workspace:
+    #   host: https://...

@@ -22,6 +22,18 @@ resources:
             value_from: "experiment"
           - name: DATABRICKS_WAREHOUSE_ID
             value: "322702d284b4a804"
+          - name: LAKEBASE_PROJECT_ID
+            value: "insurance-claim"
+          - name: LAKEBASE_BRANCH_ID
+            value: "production"
+          - name: LAKEBASE_ENDPOINT_ID
+            value: "primary"
+          - name: LAKEBASE_DATABASE
+            value: "databricks_postgres"
+          - name: LAKEBASE_SCHEMA
+            value: "claims"
+          - name: EMBEDDING_ENDPOINT
+            value: "databricks-gte-large-en"
 
       # Resources which this app has access to
       resources:
@@ -37,13 +49,6 @@ resources:
             space_id: '01f1b0d16247106aacc4750ce7e1b24f'
             permission: 'CAN_RUN'
 
-        # Vector Search index — unstructured multi-modal claims KB
-        - name: 'claims_kb_index'
-          uc_securable:
-            securable_full_name: 'fins_genai.claims_multimodal_kb.gold_chunks_vs_index'
-            securable_type: 'TABLE'
-            permission: 'SELECT'
-
         # python_exec — ad-hoc calculations
         - name: 'python_exec'
           uc_securable:
@@ -55,6 +60,19 @@ resources:
         - name: 'orchestrator_model'
           serving_endpoint:
             name: 'databricks-gpt-5-2'
+            permission: 'CAN_QUERY'
+
+        # Lakebase (pgvector document search)
+        - name: 'lakebase'
+          postgres:
+            branch: 'projects/insurance-claim/branches/production'
+            database: 'projects/insurance-claim/branches/production/databases/databricks-postgres'
+            permission: 'CAN_CONNECT_AND_CREATE'
+
+        # Embedding model for document search
+        - name: 'embedding_model'
+          serving_endpoint:
+            name: 'databricks-gte-large-en'
             permission: 'CAN_QUERY'
 
         # --- Viewer data access (doc/claim/file APIs) ---

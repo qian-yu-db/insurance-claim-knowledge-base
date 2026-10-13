@@ -14,19 +14,6 @@
   },
   {
     "claim_id": "CLM-2026-04412",
-    "relative_path": "CLM-2026-04412/images/IMG_4201_CLM-2026-04412.heic",
-    "modality": "image",
-    "format": "heic",
-    "peril": "Vehicle collision",
-    "severity": "minor",
-    "carrier": "Summit Ridge Casualty",
-    "policy_no": "PA-2026-101618576",
-    "insured": "Marcus T. Okonkwo",
-    "doc_type": "damage_photo",
-    "source": "dbdemos-smart-claims"
-  },
-  {
-    "claim_id": "CLM-2026-04412",
     "relative_path": "CLM-2026-04412/images/IMG_4202_CLM-2026-04412.png",
     "modality": "image",
     "format": "png",
@@ -37,18 +24,6 @@
     "insured": "Marcus T. Okonkwo",
     "doc_type": "damage_photo",
     "source": "dbdemos-smart-claims"
-  },
-  {
-    "claim_id": "CLM-2026-04412",
-    "relative_path": "CLM-2026-04412/images/CLM-2026-04412_signature.gif",
-    "modality": "image",
-    "format": "gif",
-    "peril": "Vehicle collision",
-    "severity": "minor",
-    "carrier": "Summit Ridge Casualty",
-    "policy_no": "PA-2026-101618576",
-    "insured": "Marcus T. Okonkwo",
-    "doc_type": "email_signature_graphic"
   },
   {
     "claim_id": "CLM-2026-04412",

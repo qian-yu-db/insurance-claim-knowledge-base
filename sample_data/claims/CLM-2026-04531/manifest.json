@@ -14,19 +14,6 @@
   },
   {
     "claim_id": "CLM-2026-04531",
-    "relative_path": "CLM-2026-04531/images/IMG_4201_CLM-2026-04531.heic",
-    "modality": "image",
-    "format": "heic",
-    "peril": "Vehicle collision",
-    "severity": "moderate",
-    "carrier": "Blue Meridian Insurance",
-    "policy_no": "PA-2026-101618580",
-    "insured": "Angela M. Foster",
-    "doc_type": "damage_photo",
-    "source": "dbdemos-smart-claims"
-  },
-  {
-    "claim_id": "CLM-2026-04531",
     "relative_path": "CLM-2026-04531/images/IMG_4202_CLM-2026-04531.png",
     "modality": "image",
     "format": "png",
@@ -37,31 +24,6 @@
     "insured": "Angela M. Foster",
     "doc_type": "damage_photo",
     "source": "dbdemos-smart-claims"
-  },
-  {
-    "claim_id": "CLM-2026-04531",
-    "relative_path": "CLM-2026-04531/images/IMG_4203_CLM-2026-04531.tiff",
-    "modality": "image",
-    "format": "tiff",
-    "peril": "Vehicle collision",
-    "severity": "moderate",
-    "carrier": "Blue Meridian Insurance",
-    "policy_no": "PA-2026-101618580",
-    "insured": "Angela M. Foster",
-    "doc_type": "damage_photo",
-    "source": "dbdemos-smart-claims"
-  },
-  {
-    "claim_id": "CLM-2026-04531",
-    "relative_path": "CLM-2026-04531/images/CLM-2026-04531_signature.gif",
-    "modality": "image",
-    "format": "gif",
-    "peril": "Vehicle collision",
-    "severity": "moderate",
-    "carrier": "Blue Meridian Insurance",
-    "policy_no": "PA-2026-101618580",
-    "insured": "Angela M. Foster",
-    "doc_type": "email_signature_graphic"
   },
   {
     "claim_id": "CLM-2026-04531",
