@@ -101,9 +101,11 @@ swap them for your own values before deploying:
 - **This is the v1.x line** (Vector Search / AI Search retrieval), maintained on `release/v1.1`. `main` is v2.x
   (Lakebase hybrid search). v1.x deploys as the app **`adjuster-console-v1`** with its own bundle
   (`adjuster_console_v1`), so it can run in the same workspace as the v2 app without touching it.
-- The Vector Search index is a triggered Delta Sync index on `gold_chunks`. After the pipeline rebuilds
-  `gold_chunks`, sync it (Catalog Explorer → index → *Sync now*, or
-  `databricks vector-search-indexes sync-index <catalog>.<schema>.gold_chunks_vs_index`).
+- The Vector Search index is a triggered Delta Sync index on `gold_chunks`. The `claims-kb-v1-index-sync`
+  job (`pipeline/databricks.yml`) syncs it whenever `gold_chunks` is updated (table-update trigger), e.g. after
+  the v2 pipeline job runs. `06` MERGEs into `gold_chunks` in place, so the table keeps the identity the index
+  is bound to. Recreating the index drops the app's grant on it: redeploy the app afterwards
+  (`databricks bundle deploy`) to re-apply `SELECT`.
 - `adjuster-console/uv.lock` must resolve from **public PyPI**. The Databricks Apps build can't reach private or
   internal package mirrors.
 - No credentials are committed. `.env`, `.venv/`, and `.databricks/` are git-ignored.

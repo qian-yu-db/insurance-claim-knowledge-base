@@ -1,0 +1,22 @@
+# Runs 07b_vector_search_sync (triggers a sync and waits for it) whenever
+# gold_chunks is updated. gold_chunks is MERGEd in place by nb 06, so its Delta table id (which the
+# Delta Sync index is bound to) never changes.
+resources:
+  jobs:
+    claims_kb_v1_index_sync:
+      name: claims-kb-v1-index-sync
+
+      trigger:
+        pause_status: UNPAUSED   # dev mode still pauses it; unpause in the Jobs UI to try it there
+        table_update:
+          table_names:
+            - fins_genai.claims_multimodal_kb.gold_chunks
+          condition: ANY_UPDATED
+          wait_after_last_change_seconds: 120
+
+      max_concurrent_runs: 1
+
+      tasks:
+        - task_key: vector_search_sync
+          notebook_task:
+            notebook_path: ../notebooks/07b_vector_search_sync.py
