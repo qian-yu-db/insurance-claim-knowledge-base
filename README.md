@@ -46,7 +46,7 @@ flowchart TB
     end
 
     RAW --> BRONZE
-    ORCH -->|"docs (MCP)"| VS
+    ORCH -->|"docs (HYBRID query tool)"| VS
     ORCH -->|"facts (MCP)"| GENIE["Genie space"]
     GENIE --> FACTS
     ORCH -->|"math (MCP)"| PY["python_exec"]
@@ -56,8 +56,11 @@ flowchart TB
 - **AI Functions used:** `ai_parse_document`, `ai_classify`, `ai_extract`, `ai_prep_search`, and
   audio transcription via **`ai_transcribe`** (preferred — built-in, speaker diarization) or `ai_query`
   against a Whisper endpoint (the two `03c_*` notebooks are alternatives — run one).
-- **Retrieval:** hybrid Vector Search over chunked, metadata-tagged documents; exact aggregation over the
-  payment ledger stays in Delta and is answered by a Genie space (semantic search over a ledger is weak).
+- **Retrieval:** AI Search (Vector Search) `HYBRID` queries (vector + keyword) over chunked, metadata-tagged
+  documents, with an optional `claim_id` filter, via the app's `claims_document_search` tool. Up to v1.1.0
+  the app used the managed Vector Search MCP server, which only runs ANN queries without filters.
+- **Structured facts:** exact aggregation over the payment ledger stays in Delta and is answered by a Genie
+  space (semantic search over a ledger is weak).
 
 ## Quickstart
 

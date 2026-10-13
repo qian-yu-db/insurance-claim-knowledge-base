@@ -50,6 +50,8 @@ index in **nb 07**.
 - **Hybrid search:** `query_type="HYBRID"` blends vector similarity with keyword/BM25 over the chunk
   text — catches exact tokens (policy numbers, names, "L4-L5") pure semantics miss. It does **not**
   search metadata columns; those are for filtering/faceting.
+  The app's `claims_document_search` tool issues `HYBRID` queries and applies a `claim_id` filter when the
+  question is about one claim (v1.1.1+; earlier versions used the Vector Search MCP server, ANN only).
 - **Provenance & governance:** `source_uri`, `filename`, `chunk_position` (cite/deep-link), `pii_masked`,
   `content_source` (flags model-generated captions vs. parsed text), `ingested_at`.
 
