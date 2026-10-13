@@ -59,3 +59,10 @@ def test_failure_reports_unavailable(monkeypatch):
     monkeypatch.setattr(agent, "_get_retriever", lambda: _FakeRetriever(exc=RuntimeError("503")))
     out = agent.run_document_search("x")
     assert out.startswith("UNAVAILABLE") and "No matching documents" not in out
+
+
+def test_functions_mcp_scoped_to_python_exec():
+    # A schema-level URL (/mcp/functions/system/ai) exposes every system.ai function as a tool.
+    from agent_server import agent
+    fn_urls = [u for u in (_server_url(s) for s in agent.build_mcp_servers()) if "/mcp/functions/" in u]
+    assert fn_urls and all(u.rstrip("/").endswith("/mcp/functions/system/ai/python_exec") for u in fn_urls)
