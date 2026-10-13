@@ -9,7 +9,7 @@ Tools:
   1. Genie space            → structured claims data (fact_payments, dim_claim) [MCP]
   2. claims_document_search → unstructured claims KB (gold_chunks_vs_index) via AI Search
                               HYBRID query (vector + keyword) with an optional claim_id filter
-  3. system.ai              → python_exec for ad-hoc calculations [MCP]
+  3. system.ai.python_exec  → ad-hoc calculations [MCP, scoped to this one function]
 
 Routing: structured → Genie, documents/narrative → claims_document_search, math → python_exec.
 """
@@ -50,7 +50,8 @@ VS_QUERY_TYPE = "HYBRID"                                      # vector similarit
 VS_NUM_RESULTS = 10
 VS_COLUMNS = ["chunk_id", "doc_id", "claim_id", "doc_type", "corpus", "carrier", "peril",
               "filename", "source_uri", "chunk_to_retrieve"]
-FUNCTIONS_CATALOG, FUNCTIONS_SCHEMA = "system", "ai"         # exposes python_exec
+PYTHON_EXEC_FN = "system.ai.python_exec"  # same securable as databricks.yml; MCP is scoped to this one
+                                          # function (the schema URL would expose all of system.ai)
 MODEL = "databricks-gpt-5-2"                                  # orchestrator LLM
 
 # ---------------------------------------------------------------------------
@@ -76,7 +77,7 @@ def build_mcp_servers() -> list[McpServer]:
             name="Genie (structured claims data)",
         ),
         McpServer(
-            url=build_mcp_url(f"/api/2.0/mcp/functions/{FUNCTIONS_CATALOG}/{FUNCTIONS_SCHEMA}"),
+            url=build_mcp_url(f"/api/2.0/mcp/functions/{PYTHON_EXEC_FN.replace('.', '/')}"),
             name="Python exec",
         ),
     ]

@@ -135,7 +135,7 @@ async def chat_stream(request: Request):
     """SSE endpoint that streams agent responses with step visibility.
 
     Retrieval-agnostic: it drives whatever tools the orchestrator agent is
-    configured with (here: Genie + Vector Search + python_exec).
+    configured with (here: Genie + claims_document_search (AI Search HYBRID) + python_exec).
 
     Emits events:
       - {"type": "step", "id": "...", "label": "...", "status": "active|done"}
