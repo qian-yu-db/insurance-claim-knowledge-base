@@ -1,11 +1,11 @@
 # Modified from databricks/app-templates (agent-openai-agents-sdk-multiagent); see LICENSE and NOTICE.
 bundle:
-  name: agent_openai_agents_sdk_multiagent
+  name: adjuster_console_v1
 
 resources:
   apps:
     agent_openai_agents_sdk_multiagent:
-      name: "agent-openai-multiagent"
+      name: "adjuster-console-v1"
       description: "Multi-agent orchestrator that queries other agents, Genie spaces,
         and serving endpoints"
       source_code_path: ./
@@ -99,4 +99,4 @@ targets:
     resources:
       apps:
         agent_openai_agents_sdk_multiagent:
-          name: agent-openai-multiagent
+          name: adjuster-console-v1

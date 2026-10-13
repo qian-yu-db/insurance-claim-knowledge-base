@@ -95,6 +95,14 @@ swap them for your own values before deploying:
 
 ## Notes
 
+- **This is the v1.x line** (Vector Search / AI Search retrieval), maintained on `release/v1.1`. `main` is v2.x
+  (Lakebase hybrid search). v1.x deploys as the app **`adjuster-console-v1`** with its own bundle
+  (`adjuster_console_v1`), so it can run in the same workspace as the v2 app without touching it.
+- The Vector Search index is a triggered Delta Sync index on `gold_chunks`. After the pipeline rebuilds
+  `gold_chunks`, sync it (Catalog Explorer → index → *Sync now*, or
+  `databricks vector-search-indexes sync-index <catalog>.<schema>.gold_chunks_vs_index`).
+- `adjuster-console/uv.lock` must resolve from **public PyPI**. The Databricks Apps build can't reach private or
+  internal package mirrors.
 - No credentials are committed. `.env`, `.venv/`, and `.databricks/` are git-ignored.
 - Local dev uses [`uv`](https://docs.astral.sh/uv/). After cloning, run `uv sync` in `adjuster-console/`.
 - The `sample_data/claims/` set is synthetic and provided as-is for testing; the generator used to
