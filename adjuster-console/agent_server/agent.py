@@ -8,7 +8,7 @@ controls the response (notably: surfacing document citations for the viewer pane
 Tools:
   1. Genie space          → structured claims data (fact_payments, dim_claim) [MCP]
   2. claims_document_search → unstructured claims KB via in-process Lakebase hybrid search
-  3. system.ai            → python_exec for ad-hoc calculations [MCP]
+  3. system.ai.python_exec → ad-hoc calculations [MCP, scoped to this one function]
 
 Routing: structured → Genie, documents/narrative → claims_document_search, math → python_exec.
 """
@@ -42,7 +42,8 @@ from agent_server.utils import (
 # Resource configuration (fevm-classic-stable)
 # ---------------------------------------------------------------------------
 GENIE_SPACE_ID = "01f1b0d16247106aacc4750ce7e1b24f"          # "Insurance Claims and Payments"
-FUNCTIONS_CATALOG, FUNCTIONS_SCHEMA = "system", "ai"         # exposes python_exec
+PYTHON_EXEC_FN = "system.ai.python_exec"  # same securable as databricks.yml; MCP is scoped to this one
+                                          # function (the schema URL would expose all of system.ai)
 MODEL = "databricks-gpt-5-2"                                  # orchestrator LLM
 
 # ---------------------------------------------------------------------------
@@ -68,7 +69,7 @@ def build_mcp_servers() -> list[McpServer]:
             name="Genie (structured claims data)",
         ),
         McpServer(
-            url=build_mcp_url(f"/api/2.0/mcp/functions/{FUNCTIONS_CATALOG}/{FUNCTIONS_SCHEMA}"),
+            url=build_mcp_url(f"/api/2.0/mcp/functions/{PYTHON_EXEC_FN.replace('.', '/')}"),
             name="Python exec",
         ),
     ]
