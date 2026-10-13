@@ -5,22 +5,26 @@ Insurance Claims Assistant — orchestrator agent for adjusters.
 Mirrors the Agent Bricks supervisor (mas-63a9094a-endpoint) in code so the app
 controls the response (notably: surfacing document citations for the viewer pane).
 
-Tools are all Databricks-hosted MCP servers:
-  1. Genie space   → structured claims data (fact_payments, dim_claim)
-  2. Vector search → unstructured claims KB (gold_chunks_vs_index) — returns source_uri
-  3. system.ai     → python_exec for ad-hoc calculations
+Tools:
+  1. Genie space            → structured claims data (fact_payments, dim_claim) [MCP]
+  2. claims_document_search → unstructured claims KB (gold_chunks_vs_index) via AI Search
+                              HYBRID query (vector + keyword) with an optional claim_id filter
+  3. system.ai              → python_exec for ad-hoc calculations [MCP]
 
-Routing: structured → Genie, documents/narrative → vector search, math → python_exec.
+Routing: structured → Genie, documents/narrative → claims_document_search, math → python_exec.
 """
 
+import json
 import logging
 from contextlib import AsyncExitStack
 from typing import AsyncGenerator
 
 import mlflow
-from agents import Agent, Runner, set_default_openai_api, set_default_openai_client
+from agents import Agent, Runner, function_tool, set_default_openai_api, set_default_openai_client
 from agents.tracing import set_trace_processors
-from databricks_openai import AsyncDatabricksOpenAI
+from databricks.sdk import WorkspaceClient
+from databricks_ai_bridge.vector_search_retriever_tool import FilterItem
+from databricks_openai import AsyncDatabricksOpenAI, VectorSearchRetrieverTool
 from databricks_openai.agents import McpServer
 from mlflow.genai.agent_server import invoke, stream
 from mlflow.types.responses import (
@@ -42,6 +46,10 @@ from agent_server.utils import (
 GENIE_SPACE_ID = "01f1b0d16247106aacc4750ce7e1b24f"          # "Insurance Claims and Payments"
 VS_CATALOG, VS_SCHEMA = "fins_genai", "claims_multimodal_kb"
 VS_INDEX = "gold_chunks_vs_index"                             # the multi-modal claims KB index
+VS_QUERY_TYPE = "HYBRID"                                      # vector similarity + keyword matching
+VS_NUM_RESULTS = 10
+VS_COLUMNS = ["chunk_id", "doc_id", "claim_id", "doc_type", "corpus", "carrier", "peril",
+              "filename", "source_uri", "chunk_to_retrieve"]
 FUNCTIONS_CATALOG, FUNCTIONS_SCHEMA = "system", "ai"         # exposes python_exec
 MODEL = "databricks-gpt-5-2"                                  # orchestrator LLM
 
@@ -61,15 +69,11 @@ logger = logging.getLogger(__name__)
 
 
 def build_mcp_servers() -> list[McpServer]:
-    """The three hosted MCP tools the orchestrator routes between."""
+    """The hosted MCP tools (Genie, python_exec). Document search is an in-process tool."""
     return [
         McpServer(
             url=build_mcp_url(f"/api/2.0/mcp/genie/{GENIE_SPACE_ID}"),
             name="Genie (structured claims data)",
-        ),
-        McpServer(
-            url=build_mcp_url(f"/api/2.0/mcp/vector-search/{VS_CATALOG}/{VS_SCHEMA}/{VS_INDEX}"),
-            name="Claims document search",
         ),
         McpServer(
             url=build_mcp_url(f"/api/2.0/mcp/functions/{FUNCTIONS_CATALOG}/{FUNCTIONS_SCHEMA}"),
@@ -104,6 +108,62 @@ async def connect_healthy_mcp_servers(
 
 
 # ---------------------------------------------------------------------------
+# Document search (AI Search HYBRID query)
+# ---------------------------------------------------------------------------
+# The managed Vector Search MCP server only exposes a `query` argument and defaults to ANN with no
+# filters, so we query the index directly with the AI Bridge retriever tool instead.
+
+_retriever: VectorSearchRetrieverTool | None = None
+
+
+def _get_retriever() -> VectorSearchRetrieverTool:
+    """Built on first use: construction looks the index up, which needs workspace auth."""
+    global _retriever
+    if _retriever is None:
+        _retriever = VectorSearchRetrieverTool(
+            index_name=f"{VS_CATALOG}.{VS_SCHEMA}.{VS_INDEX}",
+            query_type=VS_QUERY_TYPE,
+            num_results=VS_NUM_RESULTS,
+            columns=VS_COLUMNS,
+            workspace_client=WorkspaceClient(),
+        )
+    return _retriever
+
+
+@function_tool
+def claims_document_search(query: str, claim_id: str = "") -> str:
+    """Search the claims document knowledge base for relevant passages.
+
+    Use for document/narrative questions: what happened, medical findings, injuries,
+    correspondence, defense counsel, negotiation, coverage letters, investigation/SIU,
+    damage descriptions, recorded-call transcripts.
+    Args:
+        query: Natural language search query.
+        claim_id: Optional claim number to restrict results to one claim.
+    """
+    return run_document_search(query, claim_id)
+
+
+def run_document_search(query: str, claim_id: str = "") -> str:
+    """Tool body, kept separate from the @function_tool wrapper so it can be tested directly."""
+    try:
+        filters = [FilterItem(key="claim_id", value=claim_id)] if claim_id else None
+        docs = _get_retriever().execute(query, filters=filters)
+    except Exception:
+        logger.exception("AI Search document search failed")
+        return ("UNAVAILABLE: the claims document search is temporarily unavailable. Do not conclude "
+                "that documents are missing; tell the user document search could not be reached.")
+    if not docs:
+        return "No matching documents found."
+    results = []
+    for d in docs:
+        meta = dict(d.get("metadata") or {})
+        meta["content"] = meta.pop("chunk_to_retrieve", None) or d.get("page_content", "")
+        results.append(meta)
+    return json.dumps(results, default=str)
+
+
+# ---------------------------------------------------------------------------
 # Orchestrator agent
 # ---------------------------------------------------------------------------
 
@@ -117,7 +177,7 @@ comparisons by carrier / peril / adjuster, financial breakdowns): use the **Geni
 query fact_payments and dim_claim.
 - **Documents / narrative** (what happened, medical findings, injuries, correspondence, defense \
 counsel, negotiation, coverage letters, investigation/SIU, damage descriptions from photos, \
-recorded-call transcripts): use the **Claims document search** (vector search) tool.
+recorded-call transcripts): use the **claims_document_search** tool.
 - **Calculations / ad-hoc math** on retrieved values: use **python_exec**.
 
 ## Scoping
@@ -125,7 +185,7 @@ When the user's question is about a specific claim, pass the claim number (e.g. 
 the tools so results are scoped to that claim.
 
 ## Citations (important for the app UI)
-When you answer from the Claims document search tool, ALWAYS list the sources you used at the end \
+When you answer from the claims_document_search tool, ALWAYS list the sources you used at the end \
 under a "Sources:" line — include each passage's `source_uri`, `doc_type`, and `claim_id` when \
 present in the tool result. The app uses these to open the exact document in the viewer pane. \
 When you answer from Genie, note that the figures come from structured claim data.
@@ -150,7 +210,7 @@ def create_orchestrator_agent(
         instructions=instructions,
         model=MODEL,
         mcp_servers=mcp_servers,
-        tools=[],
+        tools=[claims_document_search],
     )
 
 

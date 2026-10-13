@@ -16,7 +16,8 @@ Implements the default architecture in [`../../docs/claims_kb_architecture.md`](
 | 04 | `04_silver_documents` | unify + `ai_classify` + `ai_extract` + **metadata columns** | 02, 03, 03c |
 | 05 | `05_structured_facts` | `fact_payments`, `dim_claim` (Delta for SQL/Genie) | 04 |
 | 06 | `06_gold_chunks` | `ai_prep_search` chunks + metadata propagation | 04 |
-| 07 | `07_vector_search_index` | Delta Sync index + filtered hybrid query | 06 |
+| 07 | `07_vector_search_index` | Delta Sync index + filtered hybrid query (one-time create) | 06 |
+| 07b | `07b_vector_search_sync` | sync the existing index and wait for it (run by `claims-kb-v1-index-sync`) | 06 |
 
 Run 02 before 03 (03 reads 02's parse output to find no-text images); 03c is independent of 02/03.
 05 and 06 can run in parallel after 04. As a Lakeflow Job, wire tasks with these dependencies.
@@ -26,7 +27,7 @@ Run 02 before 03 (03 reads 02's parse output to find no-text images); 03c is ind
 | Widget | Default | Notes |
 |---|---|---|
 | `catalog` / `schema` | `fins_genai` / `claims_multimodal_kb` | where tables + index are created |
-| `landing_path` | `/Volumes/fins_genai/claims_multimodal_kb/landing/claims` | raw files (78, incl. 6 audio) |
+| `landing_path` | `/Volumes/fins_genai/claims_multimodal_kb/landing/claims` | raw files (66, incl. 6 audio) |
 | `embedding_endpoint` | `databricks-gte-large-en` | index embeddings |
 | `vision_endpoint` | `databricks-llama-4-maverick` | image captions |
 | `email_endpoint` | `databricks-claude-haiku-4-5` | `.eml` body cleanup |
@@ -50,6 +51,8 @@ index in **nb 07**.
 - **Hybrid search:** `query_type="HYBRID"` blends vector similarity with keyword/BM25 over the chunk
   text — catches exact tokens (policy numbers, names, "L4-L5") pure semantics miss. It does **not**
   search metadata columns; those are for filtering/faceting.
+  The app's `claims_document_search` tool issues `HYBRID` queries and applies a `claim_id` filter when the
+  question is about one claim (v1.1.1+; earlier versions used the Vector Search MCP server, ANN only).
 - **Provenance & governance:** `source_uri`, `filename`, `chunk_position` (cite/deep-link), `pii_masked`,
   `content_source` (flags model-generated captions vs. parsed text), `ingested_at`.
 
@@ -69,6 +72,12 @@ range filters; don't use free text as a filter.
 - **Deferred:** video (`mov/mp4/3gp`, `route='media_pending'`) — no video for now.
 
 ## Running
+
+**Keeping the index in sync:** `pipeline/databricks.yml` defines `claims-kb-v1-index-sync`, a serverless job
+that runs `07b` whenever `gold_chunks` changes. `07b` uses only the preinstalled `databricks-sdk`.
+> On current serverless environments, nb 07's `%pip install databricks-vectorsearch` downgrades `protobuf`
+> and the Python kernel fails to start. Use a classic cluster (or an older serverless environment) for the
+> one-time index creation, or create the index from Catalog Explorer.
 
 Interactively: open `00_config`, set widgets, then run 01→07 in order. As a Job: create one task per
 notebook with the dependencies above; all share the same widget values (set as job parameters). Compute

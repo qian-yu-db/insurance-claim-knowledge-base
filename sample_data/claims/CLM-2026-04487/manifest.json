@@ -14,19 +14,6 @@
   },
   {
     "claim_id": "CLM-2026-04487",
-    "relative_path": "CLM-2026-04487/images/IMG_4201_CLM-2026-04487.heic",
-    "modality": "image",
-    "format": "heic",
-    "peril": "Vehicle collision",
-    "severity": "major",
-    "carrier": "Harbor Mutual Insurance",
-    "policy_no": "PA-2026-101618579",
-    "insured": "Patricia J. Carmichael",
-    "doc_type": "damage_photo",
-    "source": "dbdemos-smart-claims"
-  },
-  {
-    "claim_id": "CLM-2026-04487",
     "relative_path": "CLM-2026-04487/images/IMG_4202_CLM-2026-04487.png",
     "modality": "image",
     "format": "png",
@@ -37,31 +24,6 @@
     "insured": "Patricia J. Carmichael",
     "doc_type": "damage_photo",
     "source": "dbdemos-smart-claims"
-  },
-  {
-    "claim_id": "CLM-2026-04487",
-    "relative_path": "CLM-2026-04487/images/IMG_4203_CLM-2026-04487.tiff",
-    "modality": "image",
-    "format": "tiff",
-    "peril": "Vehicle collision",
-    "severity": "major",
-    "carrier": "Harbor Mutual Insurance",
-    "policy_no": "PA-2026-101618579",
-    "insured": "Patricia J. Carmichael",
-    "doc_type": "damage_photo",
-    "source": "dbdemos-smart-claims"
-  },
-  {
-    "claim_id": "CLM-2026-04487",
-    "relative_path": "CLM-2026-04487/images/CLM-2026-04487_signature.gif",
-    "modality": "image",
-    "format": "gif",
-    "peril": "Vehicle collision",
-    "severity": "major",
-    "carrier": "Harbor Mutual Insurance",
-    "policy_no": "PA-2026-101618579",
-    "insured": "Patricia J. Carmichael",
-    "doc_type": "email_signature_graphic"
   },
   {
     "claim_id": "CLM-2026-04487",
@@ -98,18 +60,6 @@
     "policy_no": "PA-2026-101618579",
     "insured": "Patricia J. Carmichael",
     "doc_type": "medical_scan_page"
-  },
-  {
-    "claim_id": "CLM-2026-04487",
-    "relative_path": "CLM-2026-04487/images/IMG_CLM-2026-04487_doc_in_hand.heic",
-    "modality": "image",
-    "format": "heic",
-    "peril": "Vehicle collision",
-    "severity": "major",
-    "carrier": "Harbor Mutual Insurance",
-    "policy_no": "PA-2026-101618579",
-    "insured": "Patricia J. Carmichael",
-    "doc_type": "document_photo_in_hand"
   },
   {
     "claim_id": "CLM-2026-04487",

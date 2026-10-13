@@ -1,0 +1,17 @@
+# v1.x: keeps the AI Search (Vector Search) index in sync with gold_chunks.
+# The shared pipeline (01 → 06) is run by the v2 job on `main`; this bundle only syncs v1's index.
+#   databricks bundle deploy -t dev --profile <profile>
+#   databricks bundle run claims_kb_v1_index_sync -t dev --profile <profile>
+bundle:
+  name: claims_kb_v1_index_sync
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+
+  prod:
+    mode: production

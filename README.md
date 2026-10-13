@@ -10,7 +10,7 @@ Everything here is **synthetic**. It is meant as a blueprint you adapt to your o
 
 | Component | Path | What it is |
 |---|---|---|
-| **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | Ready-to-use synthetic test set: 3 internally-consistent auto-collision claims (69 artifacts across modalities) + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). Bring your own claim data for production. |
+| **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | Ready-to-use synthetic test set: 3 internally-consistent auto-collision claims (60 artifacts across modalities) + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). Bring your own claim data for production. |
 | **Batch pipeline** | [`pipeline/notebooks/`](pipeline/notebooks/) | Medallion pipeline (Bronze → Silver → Gold → Vector Search) built on Databricks AI Functions. See its [README](pipeline/notebooks/README.md). |
 | **Genie space** | [`genie/`](genie/) | Exported config + import script for the Genie space over the structured facts (`dim_claim`, `fact_payments`) that the app routes fact/aggregation questions to. See its [README](genie/README.md). |
 | **Adjuster console app** | [`adjuster-console/`](adjuster-console/) | FastAPI + vanilla-JS 2-pane app (doc/image/transcript viewer + grounded chat), deployed to Databricks Apps. |
@@ -46,7 +46,7 @@ flowchart TB
     end
 
     RAW --> BRONZE
-    ORCH -->|"docs (MCP)"| VS
+    ORCH -->|"docs (HYBRID query tool)"| VS
     ORCH -->|"facts (MCP)"| GENIE["Genie space"]
     GENIE --> FACTS
     ORCH -->|"math (MCP)"| PY["python_exec"]
@@ -56,8 +56,11 @@ flowchart TB
 - **AI Functions used:** `ai_parse_document`, `ai_classify`, `ai_extract`, `ai_prep_search`, and
   audio transcription via **`ai_transcribe`** (preferred — built-in, speaker diarization) or `ai_query`
   against a Whisper endpoint (the two `03c_*` notebooks are alternatives — run one).
-- **Retrieval:** hybrid Vector Search over chunked, metadata-tagged documents; exact aggregation over the
-  payment ledger stays in Delta and is answered by a Genie space (semantic search over a ledger is weak).
+- **Retrieval:** AI Search (Vector Search) `HYBRID` queries (vector + keyword) over chunked, metadata-tagged
+  documents, with an optional `claim_id` filter, via the app's `claims_document_search` tool. Up to v1.1.0
+  the app used the managed Vector Search MCP server, which only runs ANN queries without filters.
+- **Structured facts:** exact aggregation over the payment ledger stays in Delta and is answered by a Genie
+  space (semantic search over a ledger is weak).
 
 ## Quickstart
 
@@ -95,6 +98,16 @@ swap them for your own values before deploying:
 
 ## Notes
 
+- **This is the v1.x line** (Vector Search / AI Search retrieval), maintained on `release/v1.1`. `main` is v2.x
+  (Lakebase hybrid search). v1.x deploys as the app **`adjuster-console-v1`** with its own bundle
+  (`adjuster_console_v1`), so it can run in the same workspace as the v2 app without touching it.
+- The Vector Search index is a triggered Delta Sync index on `gold_chunks`. The `claims-kb-v1-index-sync`
+  job (`pipeline/databricks.yml`) syncs it whenever `gold_chunks` is updated (table-update trigger), e.g. after
+  the v2 pipeline job runs. `06` MERGEs into `gold_chunks` in place, so the table keeps the identity the index
+  is bound to. Recreating the index drops the app's grant on it: redeploy the app afterwards
+  (`databricks bundle deploy`) to re-apply `SELECT`.
+- `adjuster-console/uv.lock` must resolve from **public PyPI**. The Databricks Apps build can't reach private or
+  internal package mirrors.
 - No credentials are committed. `.env`, `.venv/`, and `.databricks/` are git-ignored.
 - Local dev uses [`uv`](https://docs.astral.sh/uv/). After cloning, run `uv sync` in `adjuster-console/`.
 - The `sample_data/claims/` set is synthetic and provided as-is for testing; the generator used to
