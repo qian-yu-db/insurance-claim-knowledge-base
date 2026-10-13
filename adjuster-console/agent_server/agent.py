@@ -42,8 +42,8 @@ from agent_server.utils import (
 # Resource configuration (fevm-classic-stable)
 # ---------------------------------------------------------------------------
 GENIE_SPACE_ID = "01f1b0d16247106aacc4750ce7e1b24f"          # "Insurance Claims and Payments"
-FUNCTIONS_CATALOG, FUNCTIONS_SCHEMA = "system", "ai"
-PYTHON_EXEC_FUNCTION = "python_exec"  # scope the MCP server to this function; the schema URL exposes all of system.ai
+PYTHON_EXEC_FN = "system.ai.python_exec"  # same securable as databricks.yml; MCP is scoped to this one
+                                          # function (the schema URL would expose all of system.ai)
 MODEL = "databricks-gpt-5-2"                                  # orchestrator LLM
 
 # ---------------------------------------------------------------------------
@@ -69,7 +69,7 @@ def build_mcp_servers() -> list[McpServer]:
             name="Genie (structured claims data)",
         ),
         McpServer(
-            url=build_mcp_url(f"/api/2.0/mcp/functions/{FUNCTIONS_CATALOG}/{FUNCTIONS_SCHEMA}/{PYTHON_EXEC_FUNCTION}"),
+            url=build_mcp_url(f"/api/2.0/mcp/functions/{PYTHON_EXEC_FN.replace('.', '/')}"),
             name="Python exec",
         ),
     ]
