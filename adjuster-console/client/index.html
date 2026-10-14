@@ -435,6 +435,16 @@
   .composer button:active { transform: translateY(0); }
   .composer button:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
 
+  .hint-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 0 20px 4px; background: var(--panel);
+  }
+  .hint-row .hint { padding: 0; }
+  .newchat {
+    font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line, #d9d4cc); background: transparent; color: var(--ink-muted);
+  }
+  .newchat:hover { color: var(--db-red); border-color: var(--db-red); }
   .hint {
     color: var(--ink-muted);
     font-size: 12px;
@@ -524,7 +534,10 @@
   </div>
   <div class="right">
     <div class="chat" id="chat"></div>
-    <div class="hint" id="claimHint"></div>
+    <div class="hint-row">
+      <div class="hint" id="claimHint"></div>
+      <button class="newchat" id="newChat" title="Start a new conversation for this claim">New chat</button>
+    </div>
     <div class="composer">
       <input id="q" placeholder="Ask about this claim… e.g. Why was it referred to SIU?" autocomplete="off" />
       <button id="send">
@@ -541,6 +554,36 @@ let claimId = null;
 let docsByUri = {};
 let docsByDocId = {};
 let history = [];
+let sessionId = null;  // one conversation per claim; the server stores it (Lakebase) per signed-in user
+
+const sessionKey = cid => `adjuster-chat-session:${cid}`;
+function newSessionId(cid) {
+  const id = crypto.randomUUID();
+  localStorage.setItem(sessionKey(cid), id);
+  return id;
+}
+function currentSessionId(cid) { return localStorage.getItem(sessionKey(cid)) || newSessionId(cid); }
+
+// Re-render a stored conversation after reload. User turns are stored as "[Claim X] question".
+async function restoreConversation(cid) {
+  let turns = [];
+  try { turns = await jget(`/api/chat/history?session_id=${encodeURIComponent(sessionId)}`); }
+  catch (e) { return; }  // memory unavailable: start empty
+  if (cid !== claimId || !turns.length) return;
+  turns.forEach(t => {
+    if (t.role === "user") addMsg("user", t.content.replace(/^\[Claim [^\]]+\]\s*/, ""));
+    else addMsg("bot", t.content);
+  });
+  history = turns.map(t => ({ role: t.role, content: t.content }));
+}
+
+function startNewChat() {
+  if (!claimId) return;
+  sessionId = newSessionId(claimId);
+  history = [];
+  $("chat").innerHTML = "";
+  showWelcome(claimId);
+}
 
 async function jget(url) {
   const r = await fetch(url);
@@ -566,6 +609,7 @@ async function loadClaims() {
 async function selectClaim(cid) {
   claimId = cid;
   history = [];
+  sessionId = currentSessionId(cid);
   $("chat").innerHTML = "";
   $("claimHint").textContent = `Scoped to ${cid}. Answers cite documents you can open on the left.`;
 
@@ -597,6 +641,8 @@ async function selectClaim(cid) {
     const summary = await jget(`/api/claims/${cid}/summary`);
     if (summary.claim_id) updateClaimCard(summary, docs.length);
   } catch(e) { /* optional endpoint */ }
+
+  await restoreConversation(cid);
 }
 
 function showWelcome(cid) {
@@ -777,7 +823,7 @@ async function ask() {
     const response = await fetch("/api/chat/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input: history }),
+      body: JSON.stringify({ input: history, custom_inputs: { session_id: sessionId } }),
     });
 
     if (!response.ok) {
@@ -908,6 +954,7 @@ function collapseSteps(container) {
 
 // ========= Init =========
 $("send").onclick = ask;
+$("newChat").onclick = startNewChat;
 $("q").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(); } });
 loadClaims().catch(e => addMsg("bot", "Failed to load claims: " + e.message));
 </script>

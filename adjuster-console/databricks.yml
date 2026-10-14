@@ -32,6 +32,9 @@ resources:
             value: "databricks_postgres"
           - name: LAKEBASE_SCHEMA
             value: "claims"
+          # Conversation memory (Agents SDK sessions); created and owned by the app SP on first use
+          - name: LAKEBASE_MEMORY_SCHEMA
+            value: "agent_memory"
           - name: EMBEDDING_ENDPOINT
             value: "databricks-gte-large-en"
 

@@ -22,7 +22,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "databricks-agents" },
-    { name = "databricks-openai" },
+    { name = "databricks-openai", extra = ["memory"] },
     { name = "databricks-sdk" },
     { name = "fastapi" },
     { name = "mlflow" },
@@ -48,7 +48,7 @@ setup = [
 [package.metadata]
 requires-dist = [
     { name = "databricks-agents", specifier = ">=1.9.3" },
-    { name = "databricks-openai", specifier = ">=0.13.0" },
+    { name = "databricks-openai", extras = ["memory"], specifier = ">=0.17.0" },
     { name = "databricks-sdk", specifier = ">=0.118.0" },
     { name = "fastapi", specifier = ">=0.129.0" },
     { name = "mlflow", specifier = ">=3.10.0" },
@@ -795,6 +795,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/69/a4/9e2ac91c180f72555e5436a3f45f73cc606d84d5ba8744213f6addc68a58/databricks_ai_bridge-0.21.0-py3-none-any.whl", hash = "sha256:5426c88c93be3765d00ad4581eff31b404a0c8154f9f25fb2fcc456170247290", size = 69621, upload-time = "2026-06-25T21:47:57.601Z" },
 ]
 
+[package.optional-dependencies]
+memory = [
+    { name = "psycopg", extra = ["binary", "pool"] },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+
 [[package]]
 name = "databricks-ai-search"
 version = "0.78"
@@ -900,6 +906,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8e/4d/117348a87bb22ba87f24605f7195ed9515f0ef7405fe7a5d4ea0371d9f7d/databricks_openai-0.17.1.tar.gz", hash = "sha256:539ed84c1131a807c21e1eb3f0f6eb40ca980dfb78dafd1519f5001e14ba77e0", size = 17130, upload-time = "2026-08-20T23:07:36.054Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bb/77/3b52ae812ea11bb072def2c96b9159fe203f7cbd3e2fe56809d1588a70fe/databricks_openai-0.17.1-py3-none-any.whl", hash = "sha256:29b98f04984f800c44e4351c19fbd87e5c07a374f9dfda4def1dff2f2d3b3c69", size = 21202, upload-time = "2026-08-20T23:07:35.11Z" },
+]
+
+[package.optional-dependencies]
+memory = [
+    { name = "databricks-ai-bridge", extra = ["memory"] },
 ]
 
 [[package]]
@@ -3944,6 +3955,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/96/d7/8ac6ffa1e36169e762ef65bd835046abb2251b1bc17f8f6708e14ed8d31f/sqlalchemy-2.0.52-cp314-cp314-win_amd64.whl", hash = "sha256:a593db51b3bae75db17a5738ad5f992244b3a03863f83c28117ee482c6a3f76d", size = 2156718, upload-time = "2026-08-11T21:14:58.667Z" },
     { url = "https://files.pythonhosted.org/packages/dc/4b/e01a737eef378e734cc6394a82248a6ce13b167dfa36c731075ce9fc9c64/sqlalchemy-2.0.52-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:c1e61d08bdf4ee2f41024569e3400de7d6734ba498144766b11260936ccfa582", size = 2190344, upload-time = "2026-08-11T19:53:21.393Z" },
     { url = "https://files.pythonhosted.org/packages/b3/3f/3582293d1e185e71d19d7c731c3e2ee20ba21981c4a1115c0806c1f62120/sqlalchemy-2.0.52-py3-none-any.whl", hash = "sha256:3b81b8363a919ce53453591cdb93702e6bd54ade6c4fa2f468fc053baee5ed89", size = 1950700, upload-time = "2026-08-11T20:47:21.603Z" },
+]
+
+[package.optional-dependencies]
+asyncio = [
+    { name = "greenlet" },
 ]
 
 [[package]]
