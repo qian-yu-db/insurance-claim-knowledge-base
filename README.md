@@ -61,7 +61,8 @@ flowchart TB
   BM25, fused with Reciprocal Rank Fusion), run in-process by the app's `claims_document_search` tool; exact aggregation over the
   payment ledger stays in Delta and is answered by a Genie space (semantic search over a ledger is weak).
 - **LLM:** the orchestrator calls `system.ai.gpt-5-2` through **Unity Gateway** (`/ai-gateway/mlflow/v1`), a
-  Unity Catalog model service governed like any other securable.
+  Unity Catalog model service governed like any other securable. The app identity needs `EXECUTE` on it
+  (`account users` have it by default).
 - **Conversation memory:** each adjuster has one ongoing conversation per claim. It's stored in Lakebase
   (`agent_memory` schema, OpenAI Agents SDK sessions), resumes after a reload, and is kept for 30 days after
   the last message. **New chat** starts over.
@@ -94,7 +95,7 @@ swap them for your own values before deploying:
 
 | Where | What to replace |
 |---|---|
-| `adjuster-console/databricks.yml` | Genie `space_id`, `sql_warehouse` / `warehouse_id`, `experiment_id`, serving-endpoint name, the `fins_genai.claims_multimodal_kb` catalog/schema, and the Lakebase `LAKEBASE_*` env vars + `postgres` resource |
+| `adjuster-console/databricks.yml` | Genie `space_id`, `sql_warehouse` / `warehouse_id`, `experiment_id`, the embedding serving endpoint (`databricks-gte-large-en`), the `fins_genai.claims_multimodal_kb` catalog/schema, and the Lakebase `LAKEBASE_*` env vars + `postgres` resource |
 | `adjuster-console/agent_server/agent.py` | `GENIE_SPACE_ID`, `MODEL` |
 | `adjuster-console/agent_server/data_api.py` | `CATALOG` / `SCHEMA` (and the landing-Volume prefix) |
 | `pipeline/notebooks/00_config.py` | catalog/schema, volume path, endpoint names, Lakebase project/branch/endpoint |
