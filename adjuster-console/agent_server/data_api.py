@@ -7,18 +7,23 @@ Runs as the app service principal when deployed; uses the .env profile locally.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import logging
 import os
 from typing import AsyncGenerator
 
+import mlflow
 from databricks.sdk import WorkspaceClient
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 from sse_starlette.sse import EventSourceResponse
 
+from agent_server import memory
 from agent_server.lakebase import pool as lb
+
+logger = logging.getLogger(__name__)
 
 CATALOG = "fins_genai"
 SCHEMA = "claims_multimodal_kb"
@@ -60,7 +65,7 @@ def _query(sql_lb: str, sql_wh: str, params_lb: tuple | None = None, params_wh: 
         try:
             return lb.query(sql_lb, params_lb)
         except Exception as e:
-            logging.getLogger(__name__).warning("Lakebase query failed, falling back to warehouse: %s", e)
+            logger.warning("Lakebase query failed, falling back to warehouse: %s", e)
     return _sql_warehouse(sql_wh, params_wh)
 
 
@@ -187,6 +192,11 @@ async def chat_stream(request: Request):
     """
     body = await request.json()
     messages = body.get("input", [])
+    # Conversation memory: the server keys the Lakebase session on the signed-in user (header set
+    # by Databricks Apps) plus the client's per-claim id. The client also sends its own history as a
+    # fallback for when the session store is unreachable.
+    user = request.headers.get("x-forwarded-email")
+    session_id = memory.scoped_session_id(user, (body.get("custom_inputs") or {}).get("session_id"))
 
     async def event_generator() -> AsyncGenerator[dict, None]:
         from contextlib import AsyncExitStack
@@ -212,61 +222,83 @@ async def chat_stream(request: Request):
             agent = create_orchestrator_agent(servers, unavailable)
             normalized = normalize_history_items(messages)
 
+            session = None
+            run_input = normalized
+            if session_id:
+                try:
+                    session = memory.open_session(session_id)
+                    await session.get_items(limit=1)  # fail fast if the session store is unreachable
+                    run_input = normalized[-1:]       # prior turns come from the session
+                    asyncio.create_task(memory.purge_expired_if_due(session))
+                except Exception:
+                    logger.warning("Session memory unavailable; using client history", exc_info=True)
+                    session, run_input = None, normalized
+
             # Step 2: thinking
             yield {"event": "message", "data": json.dumps(
                 {"type": "step", "id": "think", "label": "Analyzing your question", "status": "active"})}
 
-            result = Runner.run_streamed(agent, input=normalized)
-            active_tool: str | None = None
-            answering = False  # flips true on first text delta
+            # One trace per turn, tagged with the user and session so MLflow groups a conversation.
+            with mlflow.start_span(name="chat_turn", span_type="AGENT") as turn_span:
+                trace_meta = {"mlflow.trace.user": user or "local-dev"}
+                if session_id:
+                    trace_meta["mlflow.trace.session"] = session_id
+                mlflow.update_current_trace(metadata=trace_meta)
+                turn_span.set_inputs({"input": run_input, "memory": session is not None})
 
-            async for event in result.stream_events():
-                if event.type == "raw_response_event":
-                    ed = event.data.model_dump()
-                    evt_type = ed.get("type", "")
+                result = Runner.run_streamed(agent, input=run_input, session=session)
+                active_tool: str | None = None
+                answering = False  # flips true on first text delta
 
-                    # Tool call started – emit a step
-                    if evt_type == "response.output_item.added":
-                        item = ed.get("item", {})
-                        if item.get("type") == "function_call":
-                            tool_name = item.get("name", "tool")
-                            label = _tool_label(tool_name)
-                            active_tool = tool_name
-                            # Mark thinking done
-                            yield {"event": "message", "data": json.dumps(
-                                {"type": "step", "id": "think", "label": "Analyzing your question", "status": "done"})}
-                            yield {"event": "message", "data": json.dumps(
-                                {"type": "step", "id": f"tool_{tool_name}", "label": label, "status": "active"})}
+                async for event in result.stream_events():
+                    if event.type == "raw_response_event":
+                        ed = event.data.model_dump()
+                        evt_type = ed.get("type", "")
 
-                    # Text delta – stream to client
-                    elif evt_type == "response.output_text.delta":
-                        delta = ed.get("delta", "")
-                        if delta:
-                            # Close any active tool step
+                        # Tool call started – emit a step
+                        if evt_type == "response.output_item.added":
+                            item = ed.get("item", {})
+                            if item.get("type") == "function_call":
+                                tool_name = item.get("name", "tool")
+                                label = _tool_label(tool_name)
+                                active_tool = tool_name
+                                # Mark thinking done
+                                yield {"event": "message", "data": json.dumps(
+                                    {"type": "step", "id": "think", "label": "Analyzing your question", "status": "done"})}
+                                yield {"event": "message", "data": json.dumps(
+                                    {"type": "step", "id": f"tool_{tool_name}", "label": label, "status": "active"})}
+
+                        # Text delta – stream to client
+                        elif evt_type == "response.output_text.delta":
+                            delta = ed.get("delta", "")
+                            if delta:
+                                # Close any active tool step
+                                if active_tool:
+                                    yield {"event": "message", "data": json.dumps(
+                                        {"type": "step", "id": f"tool_{active_tool}",
+                                         "label": _tool_label(active_tool), "status": "done"})}
+                                    active_tool = None
+                                # On the first answer text: close "thinking", open "composing".
+                                # Runs whether or not a tool was called, so a direct
+                                # (no-tool) answer still shows a consistent step sequence.
+                                if not answering:
+                                    yield {"event": "message", "data": json.dumps(
+                                        {"type": "step", "id": "think", "label": "Analyzing your question", "status": "done"})}
+                                    yield {"event": "message", "data": json.dumps(
+                                        {"type": "step", "id": "respond", "label": "Composing response", "status": "active"})}
+                                    answering = True
+                                yield {"event": "message", "data": json.dumps(
+                                    {"type": "delta", "text": delta})}
+
+                    elif event.type == "run_item_stream_event":
+                        if hasattr(event, "item") and event.item.type == "tool_call_output_item":
                             if active_tool:
                                 yield {"event": "message", "data": json.dumps(
                                     {"type": "step", "id": f"tool_{active_tool}",
                                      "label": _tool_label(active_tool), "status": "done"})}
                                 active_tool = None
-                            # On the first answer text: close "thinking", open "composing".
-                            # Runs whether or not a tool was called, so a direct
-                            # (no-tool) answer still shows a consistent step sequence.
-                            if not answering:
-                                yield {"event": "message", "data": json.dumps(
-                                    {"type": "step", "id": "think", "label": "Analyzing your question", "status": "done"})}
-                                yield {"event": "message", "data": json.dumps(
-                                    {"type": "step", "id": "respond", "label": "Composing response", "status": "active"})}
-                                answering = True
-                            yield {"event": "message", "data": json.dumps(
-                                {"type": "delta", "text": delta})}
 
-                elif event.type == "run_item_stream_event":
-                    if hasattr(event, "item") and event.item.type == "tool_call_output_item":
-                        if active_tool:
-                            yield {"event": "message", "data": json.dumps(
-                                {"type": "step", "id": f"tool_{active_tool}",
-                                 "label": _tool_label(active_tool), "status": "done"})}
-                            active_tool = None
+                turn_span.set_outputs(result.final_output)  # the trace's Response column
 
             # Final done
             yield {"event": "message", "data": json.dumps(
@@ -274,6 +306,19 @@ async def chat_stream(request: Request):
             yield {"event": "message", "data": json.dumps({"type": "done"})}
 
     return EventSourceResponse(event_generator())
+
+
+@router.get("/chat/history")
+async def chat_history(request: Request, session_id: str = Query(...)) -> list[dict]:
+    """User/assistant turns of the caller's conversation, so the UI can restore it after a reload."""
+    sid = memory.scoped_session_id(request.headers.get("x-forwarded-email"), session_id)
+    if not sid:
+        raise HTTPException(400, "invalid session_id")
+    try:
+        return await memory.load_display_history(sid)
+    except Exception:
+        logger.warning("Could not load conversation history", exc_info=True)
+        return []
 
 
 def _tool_label(tool_name: str) -> str:

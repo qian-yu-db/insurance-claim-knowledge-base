@@ -32,6 +32,9 @@ resources:
             value: "databricks_postgres"
           - name: LAKEBASE_SCHEMA
             value: "claims"
+          # Conversation memory (Agents SDK sessions); created and owned by the app SP on first use
+          - name: LAKEBASE_MEMORY_SCHEMA
+            value: "agent_memory"
           - name: EMBEDDING_ENDPOINT
             value: "databricks-gte-large-en"
 
@@ -56,11 +59,8 @@ resources:
             securable_type: 'FUNCTION'
             permission: 'EXECUTE'
 
-        # Orchestrator LLM endpoint
-        - name: 'orchestrator_model'
-          serving_endpoint:
-            name: 'databricks-gpt-5-2'
-            permission: 'CAN_QUERY'
+        # Orchestrator LLM: system.ai.gpt-5-2 via Unity Gateway (/ai-gateway/mlflow/v1). It's a
+        # MODEL_SERVICE securable; `account users` hold EXECUTE, so no app resource is needed.
 
         # Lakebase (pgvector document search)
         - name: 'lakebase'

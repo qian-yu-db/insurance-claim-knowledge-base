@@ -60,6 +60,11 @@ flowchart TB
 - **Retrieval:** hybrid search in Lakebase Postgres over chunked, metadata-tagged documents (vector ANN +
   BM25, fused with Reciprocal Rank Fusion), run in-process by the app's `claims_document_search` tool; exact aggregation over the
   payment ledger stays in Delta and is answered by a Genie space (semantic search over a ledger is weak).
+- **LLM:** the orchestrator calls `system.ai.gpt-5-2` through **Unity Gateway** (`/ai-gateway/mlflow/v1`), a
+  Unity Catalog model service governed like any other securable.
+- **Conversation memory:** each adjuster has one ongoing conversation per claim. It's stored in Lakebase
+  (`agent_memory` schema, OpenAI Agents SDK sessions), resumes after a reload, and is kept for 30 days after
+  the last message. **New chat** starts over.
 
 ## Quickstart
 
