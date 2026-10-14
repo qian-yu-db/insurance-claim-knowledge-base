@@ -44,12 +44,12 @@ from agent_server.utils import (
 GENIE_SPACE_ID = "01f1b0d16247106aacc4750ce7e1b24f"          # "Insurance Claims and Payments"
 PYTHON_EXEC_FN = "system.ai.python_exec"  # same securable as databricks.yml; MCP is scoped to this one
                                           # function (the schema URL would expose all of system.ai)
-MODEL = "databricks-gpt-5-2"                                  # orchestrator LLM
+MODEL = "system.ai.gpt-5-2"                                   # orchestrator LLM (Unity Gateway model service)
 
 # ---------------------------------------------------------------------------
 # Client setup
 # ---------------------------------------------------------------------------
-set_default_openai_client(AsyncDatabricksOpenAI())
+set_default_openai_client(AsyncDatabricksOpenAI(use_ai_gateway=True))  # {host}/ai-gateway/mlflow/v1
 set_default_openai_api("chat_completions")
 set_trace_processors([])  # only use mlflow for trace processing
 mlflow.openai.autolog()

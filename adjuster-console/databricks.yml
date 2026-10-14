@@ -56,11 +56,8 @@ resources:
             securable_type: 'FUNCTION'
             permission: 'EXECUTE'
 
-        # Orchestrator LLM endpoint
-        - name: 'orchestrator_model'
-          serving_endpoint:
-            name: 'databricks-gpt-5-2'
-            permission: 'CAN_QUERY'
+        # Orchestrator LLM: system.ai.gpt-5-2 via Unity Gateway (/ai-gateway/mlflow/v1). It's a
+        # MODEL_SERVICE securable; `account users` hold EXECUTE, so no app resource is needed.
 
         # Lakebase (pgvector document search)
         - name: 'lakebase'

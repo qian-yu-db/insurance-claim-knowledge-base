@@ -41,3 +41,12 @@ def test_functions_mcp_scoped_to_python_exec():
     assert len(fn_urls) == 1
     assert fn_urls[0].startswith("https://")  # host resolved (build_mcp_url returns "None/..." otherwise)
     assert fn_urls[0].endswith("/api/2.0/mcp/functions/system/ai/python_exec")
+
+
+def test_orchestrator_uses_unity_gateway():
+    from agents.models import _openai_shared
+    from agent_server import agent
+    a = agent.create_orchestrator_agent([], [])
+    assert a.model == "system.ai.gpt-5-2"
+    client = _openai_shared.get_default_openai_client()
+    assert str(client.base_url).rstrip("/").endswith("/ai-gateway/mlflow/v1")
