@@ -6,8 +6,8 @@ resources:
   apps:
     agent_openai_agents_sdk_multiagent:
       name: "agent-openai-multiagent"
-      description: "Multi-agent orchestrator that queries other agents, Genie spaces,
-        and serving endpoints"
+      description: "Adjuster console: claim document viewer + grounded chat (Lakebase hybrid
+        search, Genie, python_exec)"
       source_code_path: ./
       config:
         # Single process: FastAPI serves the agent (/invocations), the data APIs (/api/*),
