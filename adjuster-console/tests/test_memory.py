@@ -46,6 +46,8 @@ def test_display_history_keeps_user_and_assistant_text(monkeypatch):
 # --- /api/chat/stream: what the agent is run with -----------------------------------------------
 
 class _Result:
+    final_output = "a2"
+
     async def stream_events(self):
         return
         yield

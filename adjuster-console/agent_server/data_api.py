@@ -298,6 +298,7 @@ async def chat_stream(request: Request):
                                      "label": _tool_label(active_tool), "status": "done"})}
                                 active_tool = None
 
+                turn_span.set_outputs(result.final_output)  # the trace's Response column
 
             # Final done
             yield {"event": "message", "data": json.dumps(
