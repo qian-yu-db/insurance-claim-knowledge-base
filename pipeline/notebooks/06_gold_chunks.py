@@ -108,7 +108,7 @@ note_chunks AS (
     n.doc_id,
     t.pos                        AS chunk_position,
     n.claim_id, 'claim' AS corpus, 'claim_notes' AS doc_type, 'text' AS modality,
-    'claim_note' AS content_source,
+    'table' AS content_source,          -- from a Delta table, not a file
     d.carrier, d.peril, d.loss_year, d.date_of_loss, d.policy_number, d.insured_name, d.claimant_name,
     n.adjuster_name, CAST(NULL AS DOUBLE) AS total_amount,
     concat('{CFG['t']['notes']}#', n.doc_id) AS source_uri,
