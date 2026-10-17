@@ -64,7 +64,7 @@ Defaults target **`fevm-classic-stable`** (`fins_genai.claims_multimodal_kb`) wh
 
 Claim notes are a **Delta table, not files**: `claim_id, timestamp, adjuster_id, adjuster_name, log`
 (the `claim_notes_table` widget). The pipeline only reads it. Each note becomes one document
-(`doc_type = 'adjuster_note'`, `content_source = 'claim_note'`, `doc_id` = md5 of claim + timestamp +
+(fixed `doc_type = 'claim_notes'`, `content_source = 'claim_note'`, `doc_id` = md5 of claim + timestamp +
 author) and lands in `gold_chunks` with the other documents, so search and the claim filter cover it.
 Long notes are split on paragraphs into chunks of up to 2,000 characters; every chunk starts with
 `Adjuster note · <claim> · <yyyy-MM-dd HH:mm> · <name> (<id>)`.

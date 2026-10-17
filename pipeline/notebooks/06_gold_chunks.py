@@ -107,7 +107,7 @@ note_chunks AS (
     concat(n.doc_id, '_', t.pos) AS chunk_id,
     n.doc_id,
     t.pos                        AS chunk_position,
-    n.claim_id, 'claim' AS corpus, 'adjuster_note' AS doc_type, 'text' AS modality,
+    n.claim_id, 'claim' AS corpus, 'claim_notes' AS doc_type, 'text' AS modality,
     'claim_note' AS content_source,
     d.carrier, d.peril, d.loss_year, d.date_of_loss, d.policy_number, d.insured_name, d.claimant_name,
     n.adjuster_name, CAST(NULL AS DOUBLE) AS total_amount,
