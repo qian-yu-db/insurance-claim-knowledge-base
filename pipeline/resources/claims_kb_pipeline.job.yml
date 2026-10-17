@@ -59,6 +59,7 @@ resources:
         - task_key: gold_chunks
           depends_on:
             - task_key: silver_documents
+            - task_key: structured_facts   # claim-note chunks take claim metadata from dim_claim
           notebook_task:
             notebook_path: ../notebooks/06_gold_chunks.py
 

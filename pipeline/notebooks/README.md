@@ -15,12 +15,12 @@ Implements the default architecture in [`../../docs/claims_kb_architecture.md`](
 | 03c | `03c_silver_audio` | Whisper transcription of mp3/m4a | 01 |
 | 04 | `04_silver_documents` | unify + `ai_classify` + `ai_extract` + **metadata columns** | 02, 03, 03c |
 | 05 | `05_structured_facts` | `fact_payments`, `dim_claim` (Delta for SQL/Genie) | 04 |
-| 06 | `06_gold_chunks` | `ai_prep_search` chunks + metadata propagation | 04 |
+| 06 | `06_gold_chunks` | `ai_prep_search` chunks + metadata propagation; adjuster claim notes (Delta table) chunked in | 04, 05 |
 | 07 | `07_lakebase_embed_sync` | embed `gold_chunks` → Lakebase `claims.gold_chunks_embeddings` + ANN/BM25 indexes | 06 |
 | 08 | `08_lakebase_metadata_sync` | copy `dim_claim`, `bronze_file_registry`, `silver_documents` → Lakebase `claims` schema | 04, 05 |
 
 Run 02 before 03 (03 reads 02's parse output to find no-text images); 03c is independent of 02/03.
-05 and 06 can run in parallel after 04; 07 and 08 are independent of each other.
+06 runs after 05 (claim-note chunks take their claim metadata from `dim_claim`); 07 and 08 are independent of each other.
 Re-run 07 and 08 whenever the raw data changes. They fully reload their Lakebase tables. As a Lakeflow Job, wire tasks with these dependencies.
 
 ## Lakebase prerequisites (nb 07, 08)
@@ -46,6 +46,7 @@ Re-run 07 and 08 whenever the raw data changes. They fully reload their Lakebase
 |---|---|---|
 | `catalog` / `schema` | `fins_genai` / `claims_multimodal_kb` | where tables + index are created |
 | `landing_path` | `/Volumes/fins_genai/claims_multimodal_kb/landing/claims` | raw files (66, incl. 6 audio) |
+| `claim_notes_table` | `fins_genai.claims_multimodal_kb.claim_notes` | adjuster claim notes (nb 06, read only) |
 | `embedding_endpoint` | `databricks-gte-large-en` | index embeddings |
 | `vision_endpoint` | `databricks-llama-4-maverick` | image captions |
 | `email_endpoint` | `databricks-claude-haiku-4-5` | `.eml` body cleanup |
@@ -58,6 +59,20 @@ Defaults target **`fevm-classic-stable`** (`fins_genai.claims_multimodal_kb`) wh
 `whisper-large-v3` endpoint live. Repoint the widgets for any other workspace.
 
 `00_config` verifies the foundation-model endpoints exist in the target workspace — run it first.
+
+## Adjuster claim notes (nb 06)
+
+Claim notes are a **Delta table, not files**: `claim_id, timestamp, adjuster_id, adjuster_name, log`
+(the `claim_notes_table` widget). The pipeline only reads it. Each note becomes one document
+(`doc_type = 'adjuster_note'`, `content_source = 'claim_note'`, `doc_id` = md5 of claim + timestamp +
+author) and lands in `gold_chunks` with the other documents, so search and the claim filter cover it.
+Long notes are split on paragraphs into chunks of up to 2,000 characters; every chunk starts with
+`Adjuster note · <claim> · <yyyy-MM-dd HH:mm> · <name> (<id>)`.
+
+For the sample data, create the table once with
+`uv run scripts/create_claim_notes_table.py --profile <profile> --warehouse-id <id>` (from the repo
+root; it loads `sample_data/claim_notes/claim_notes.csv`). That script stands in for the customer's
+existing table and is not part of the job.
 
 ## Metadata columns (the design)
 

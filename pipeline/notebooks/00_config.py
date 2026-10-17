@@ -16,6 +16,7 @@
 dbutils.widgets.text("catalog", "fins_genai", "Catalog")
 dbutils.widgets.text("schema", "claims_multimodal_kb", "Output schema")
 dbutils.widgets.text("landing_path", "/Volumes/fins_genai/claims_multimodal_kb/landing/claims", "Landing volume path")
+dbutils.widgets.text("claim_notes_table", "fins_genai.claims_multimodal_kb.claim_notes", "Adjuster claim notes table")
 dbutils.widgets.text("embedding_endpoint", "databricks-gte-large-en", "Embedding endpoint")
 dbutils.widgets.text("vision_endpoint", "databricks-llama-4-maverick", "Vision endpoint (image captions)")
 dbutils.widgets.text("email_endpoint", "databricks-claude-haiku-4-5", "LLM endpoint (email body cleanup)")
@@ -29,7 +30,7 @@ dbutils.widgets.text("lakebase_schema", "claims", "Lakebase schema")
 
 # COMMAND ----------
 CFG = {k: dbutils.widgets.get(k) for k in (
-    "catalog", "schema", "landing_path", "embedding_endpoint",
+    "catalog", "schema", "landing_path", "claim_notes_table", "embedding_endpoint",
     "vision_endpoint", "email_endpoint", "audio_endpoint", "pii_mask")}
 
 _lb_proj = dbutils.widgets.get("lakebase_project_id")
@@ -56,6 +57,7 @@ CFG["t"] = {                                            # table names
     "dim_claim":f"{C}.{S}.dim_claim",
     "fact_pay": f"{C}.{S}.fact_payments",
     "gold":     f"{C}.{S}.gold_chunks",
+    "notes":    CFG["claim_notes_table"],               # customer-owned source table (read only)
 }
 
 
