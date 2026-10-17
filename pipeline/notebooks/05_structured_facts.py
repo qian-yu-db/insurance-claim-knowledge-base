@@ -34,28 +34,60 @@ display(run_sql(f"SELECT claim_id, transaction_type, payee, amount_usd, status F
 
 # COMMAND ----------
 # MAGIC %md ## dim_claim — per-claim header from extracted metadata
-# MAGIC `max(...)` ignores NULLs and collapses the (consistent) per-document values to one row per claim.
+# MAGIC Each field is extracted per document (nb 04), and documents disagree (OCR misreads, a first name
+# MAGIC only, a template address). For each claim and field, the value is chosen in this order:
+# MAGIC 1. the claim's metadata record (`doc_type = 'claim_metadata'`), the system-of-record values;
+# MAGIC 2. otherwise the value the most documents agree on;
+# MAGIC 3. ties go to the FNOL / ACORD form, then to the longer (more specific) value.
+# MAGIC
+# MAGIC Adjuster names drop a trailing "- License …". With no claimant extracted (a first-party claim),
+# MAGIC the claimant is the insured.
 
 # COMMAND ----------
+FIELDS = ["carrier", "peril", "policy_number", "insured_name", "claimant_name",
+          "date_of_loss", "loss_location", "adjuster_name"]
+stack = ", ".join(f"'{f}', cast({f} AS STRING)" for f in FIELDS)
+pick = ",\n  ".join(f"max(CASE WHEN field = '{f}' THEN value END) AS {f}" for f in FIELDS)
+
 run_sql(f"""
 CREATE OR REPLACE TABLE {CFG['t']['dim_claim']} AS
+WITH claim_docs AS (
+  SELECT * FROM {CFG['t']['docs']} WHERE corpus = 'claim' AND claim_id <> ''
+),
+vals AS (
+  SELECT claim_id, f.field,
+         CASE WHEN f.field = 'adjuster_name'
+              THEN regexp_replace(trim(f.value), '\\s*-\\s*License.*$', '') ELSE trim(f.value) END AS value,
+         CASE WHEN doc_type = 'claim_metadata' THEN 1
+              WHEN doc_type IN ('fnol_claim_form', 'acord_form') THEN 2 ELSE 3 END AS prio
+  FROM claim_docs
+  LATERAL VIEW stack({len(FIELDS)}, {stack}) f AS field, value
+  WHERE nullif(trim(f.value), '') IS NOT NULL
+),
+best AS (
+  SELECT claim_id, field, value FROM (
+    SELECT claim_id, field, value, min(prio) AS prio, count(*) AS n FROM vals GROUP BY 1, 2, 3)
+  QUALIFY row_number() OVER (PARTITION BY claim_id, field
+                             ORDER BY prio = 1 DESC, n DESC, prio, length(value) DESC) = 1
+),
+header AS (
+  SELECT claim_id,
+  {pick}
+  FROM best GROUP BY claim_id
+),
+stats AS (
+  SELECT claim_id, max(total_amount) AS max_amount_seen, count(*) AS doc_count,
+         count(DISTINCT doc_type) AS distinct_doc_types
+  FROM claim_docs GROUP BY claim_id
+)
 SELECT
-  claim_id,
-  max(carrier)         AS carrier,
-  max(peril)           AS peril,
-  max(policy_number)   AS policy_number,
-  max(insured_name)    AS insured_name,
-  max(claimant_name)   AS claimant_name,
-  min(date_of_loss)    AS date_of_loss,
-  max(loss_year)       AS loss_year,
-  max(loss_location)   AS loss_location,
-  max(adjuster_name)   AS adjuster_name,
-  max(total_amount)    AS max_amount_seen,
-  count(*)             AS doc_count,
-  count(DISTINCT doc_type) AS distinct_doc_types
-FROM {CFG['t']['docs']}
-WHERE corpus = 'claim' AND claim_id <> ''
-GROUP BY claim_id
+  s.claim_id, h.carrier, h.peril, h.policy_number, h.insured_name,
+  coalesce(h.claimant_name, h.insured_name) AS claimant_name,
+  cast(h.date_of_loss AS DATE)              AS date_of_loss,
+  year(cast(h.date_of_loss AS DATE))        AS loss_year,
+  h.loss_location, h.adjuster_name,
+  s.max_amount_seen, s.doc_count, s.distinct_doc_types
+FROM stats s LEFT JOIN header h USING (claim_id)
 """)
 display(run_sql(f"SELECT * FROM {CFG['t']['dim_claim']} ORDER BY claim_id"))
 

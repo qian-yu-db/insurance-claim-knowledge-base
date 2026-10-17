@@ -14,7 +14,7 @@ Implements the default architecture in [`../../docs/claims_kb_architecture.md`](
 | 03 | `03_silver_image_caption` | vision `ai_query` captions for no-text images | 01, 02 |
 | 03c | `03c_silver_audio` | Whisper transcription of mp3/m4a | 01 |
 | 04 | `04_silver_documents` | unify + `ai_classify` + `ai_extract` + **metadata columns** | 02, 03, 03c |
-| 05 | `05_structured_facts` | `fact_payments`, `dim_claim` (Delta for SQL/Genie) | 04 |
+| 05 | `05_structured_facts` | `fact_payments`, `dim_claim` (one header row per claim: metadata record first, then majority vote) | 04 |
 | 06 | `06_gold_chunks` | `ai_prep_search` chunks + metadata propagation; adjuster claim notes (Delta table) chunked in | 04, 05 |
 | 07 | `07_lakebase_embed_sync` | embed `gold_chunks` → Lakebase `claims.gold_chunks_embeddings` + ANN/BM25 indexes | 06 |
 | 08 | `08_lakebase_metadata_sync` | copy `dim_claim`, `bronze_file_registry`, `silver_documents` → Lakebase `claims` schema | 04, 05 |
