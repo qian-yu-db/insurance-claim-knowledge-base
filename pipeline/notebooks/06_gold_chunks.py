@@ -19,7 +19,7 @@
 # MAGIC `MERGE`d in: changed rows are updated, new ones inserted, vanished ones deleted.
 # MAGIC
 # MAGIC *Masking note:* with `pii_mask='sensitive_only'`, the text/caption branch is masked (it reads
-# MAGIC `silver_documents.text_content`), while the parsed branch is chunked from the raw parse. If strict
+# MAGIC `silver_documents.text_content`) and so are claim notes, while the parsed branch is chunked from the raw parse. If strict
 # MAGIC masking of parsed chunks is required, apply `ai_mask` to `chunk_to_retrieve`/`chunk_to_embed` below.
 
 # COMMAND ----------
@@ -33,6 +33,9 @@ from pyspark.sql.types import ArrayType, StringType
 GOLD = CFG['t']['gold']
 STAGE = f"{GOLD}_staging"
 NOTE_CHUNK_CHARS = 2000
+# Same policy as nb 04: only genuinely sensitive identifiers are masked.
+note_log = ("ai_mask(log, array('us_social_security_number','bank_account_number','credit_card_number'))"
+            if CFG["pii_mask"] == "sensitive_only" else "log")
 
 
 def split_note(text: str | None) -> list[str]:
@@ -95,11 +98,12 @@ single_chunks AS (
 ),
 notes AS (
   SELECT
-    -- The notes table has no key; claim + time + author identifies a note across runs.
-    md5(concat_ws('|', claim_id, cast(timestamp AS STRING), adjuster_id)) AS doc_id,
-    claim_id, timestamp, adjuster_id, adjuster_name, log,
-    concat('Adjuster note · ', claim_id, ' · ', date_format(timestamp, 'yyyy-MM-dd HH:mm'), ' · ',
-           adjuster_name, ' (', adjuster_id, ')') AS header
+    -- The notes table has no key. Claim + time (epoch micros, independent of the session time zone)
+    -- + author + text identifies a note across runs; an edited note becomes a new doc (old one deleted).
+    md5(concat_ws('|', claim_id, cast(unix_micros(timestamp) AS STRING), adjuster_id, log)) AS doc_id,
+    claim_id, timestamp, adjuster_id, adjuster_name, {note_log} AS log,
+    concat_ws(' · ', 'Adjuster note', claim_id, date_format(timestamp, 'yyyy-MM-dd HH:mm'),
+              concat_ws(' ', adjuster_name, concat('(', adjuster_id, ')'))) AS header
   FROM {CFG['t']['notes']}
 ),
 note_chunks AS (
@@ -113,7 +117,7 @@ note_chunks AS (
     n.adjuster_name, CAST(NULL AS DOUBLE) AS total_amount,
     concat('{CFG['t']['notes']}#', n.doc_id) AS source_uri,
     concat('Adjuster note ', date_format(n.timestamp, 'yyyy-MM-dd HH:mm'), ' (', n.adjuster_name, ')') AS filename,
-    false                        AS pii_masked,
+    {str(CFG['pii_mask'] == 'sensitive_only').lower()} AS pii_masked,
     n.timestamp                  AS ingested_at,
     concat(n.header, '\n', t.part) AS chunk_to_retrieve,
     concat(n.header, '\n', t.part) AS chunk_to_embed

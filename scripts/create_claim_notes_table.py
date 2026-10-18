@@ -11,10 +11,11 @@ pipeline (nb 06) only reads the table, whose name is the `claim_notes_table` wid
 """
 import argparse
 import csv
+import time
 from pathlib import Path
 
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.sql import StatementParameterListItem
+from databricks.sdk.service.sql import ExecuteStatementRequestOnWaitTimeout, StatementParameterListItem
 
 CSV_PATH = Path(__file__).resolve().parents[1] / "sample_data/claim_notes/claim_notes.csv"
 COLS = ("claim_id", "timestamp", "adjuster_id", "adjuster_name", "log")
@@ -32,8 +33,12 @@ w = WorkspaceClient(profile=args.profile)
 def run(statement: str, params: dict | None = None) -> None:
     resp = w.statement_execution.execute_statement(
         warehouse_id=args.warehouse_id, statement=statement, wait_timeout="50s",
+        on_wait_timeout=ExecuteStatementRequestOnWaitTimeout.CONTINUE,
         parameters=[StatementParameterListItem(name=k, value=v) for k, v in (params or {}).items()],
     )
+    while resp.status.state.value in ("PENDING", "RUNNING"):  # e.g. a cold warehouse
+        time.sleep(5)
+        resp = w.statement_execution.get_statement(resp.statement_id)
     if resp.status.state.value != "SUCCEEDED":
         raise RuntimeError(f"{resp.status.state.value}: {resp.status.error}")
 

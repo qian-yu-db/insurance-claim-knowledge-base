@@ -40,8 +40,8 @@ display(run_sql(f"SELECT claim_id, transaction_type, payee, amount_usd, status F
 # MAGIC 2. otherwise the value the most documents agree on;
 # MAGIC 3. ties go to the FNOL / ACORD form, then to the longer (more specific) value.
 # MAGIC
-# MAGIC Adjuster names drop a trailing "- License …". With no claimant extracted (a first-party claim),
-# MAGIC the claimant is the insured.
+# MAGIC Adjuster names drop a trailing "- License …". A field no document provides stays NULL (e.g. no
+# MAGIC claimant extracted: it isn't guessed from the insured, which is wrong for third-party claims).
 
 # COMMAND ----------
 FIELDS = ["carrier", "peril", "policy_number", "insured_name", "claimant_name",
@@ -57,7 +57,7 @@ WITH claim_docs AS (
 vals AS (
   SELECT claim_id, f.field,
          CASE WHEN f.field = 'adjuster_name'
-              THEN regexp_replace(trim(f.value), '\\s*-\\s*License.*$', '') ELSE trim(f.value) END AS value,
+              THEN regexp_replace(trim(f.value), '\\\\s*-\\\\s*License.*$', '') ELSE trim(f.value) END AS value,
          CASE WHEN doc_type = 'claim_metadata' THEN 1
               WHEN doc_type IN ('fnol_claim_form', 'acord_form') THEN 2 ELSE 3 END AS prio
   FROM claim_docs
@@ -82,7 +82,7 @@ stats AS (
 )
 SELECT
   s.claim_id, h.carrier, h.peril, h.policy_number, h.insured_name,
-  coalesce(h.claimant_name, h.insured_name) AS claimant_name,
+  h.claimant_name,
   cast(h.date_of_loss AS DATE)              AS date_of_loss,
   year(cast(h.date_of_loss AS DATE))        AS loss_year,
   h.loss_location, h.adjuster_name,
