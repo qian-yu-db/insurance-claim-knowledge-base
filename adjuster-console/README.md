@@ -13,7 +13,7 @@ The knowledge base it reads is built by the [pipeline](../pipeline/notebooks/REA
 | Tool | Backend | Used for |
 |---|---|---|
 | `claims_document_search` | In-process hybrid search in **Lakebase Postgres** (`claims.gold_chunks_embeddings`): vector ANN + BM25, fused with RRF. Exact scan when scoped to one claim. | What happened, medical findings, correspondence, photos (captions), call transcripts |
-| Genie | **Genie space** "Insurance Claims and Payments" over `dim_claim` / `fact_payments`, via the managed Genie MCP server | Payments, totals, reserves, counts, comparisons |
+| `claim_details`, `claim_payments`, `claim_financials`, `payment_totals`, `top_claims`, `claim_notes` | Fixed **UC SQL table functions** in `fins_genai.claims_multimodal_kb` (pipeline nb 09), run on the app's SQL warehouse (`agent_server/claims_functions.py`), ~1 s per call | Claim header, payments, totals and comparisons, top claims, claim-note timelines |
 | `python_exec` | `system.ai.python_exec` via the UC Functions MCP server, scoped to that one function | Ad-hoc math on retrieved values |
 
 - **LLM:** `system.ai.gpt-5-2` through **Unity Gateway** (`AsyncDatabricksOpenAI(use_ai_gateway=True)`).
@@ -42,6 +42,7 @@ starts a fresh one.
 | Path | What it is |
 |---|---|
 | `agent_server/agent.py` | Tools, LLM client, instructions, `/invocations` handlers |
+| `agent_server/claims_functions.py` | The structured tools: calls the UC functions on the SQL warehouse |
 | `agent_server/data_api.py` | Viewer APIs (`/api/claims`, `/api/claims/{id}/docs`, `/api/claims/{id}/summary`, `/api/file`) and the UI chat endpoints (`POST /api/chat/stream`, `GET /api/chat/history`) |
 | `agent_server/lakebase.py`, `lakebase_search.py` | Lakebase connection pool (OAuth token refresh) and the hybrid search query |
 | `agent_server/memory.py` | Session scoping, history restore, 30-day retention |
@@ -55,8 +56,9 @@ The repo ships with the reference workspace's IDs. Replace them:
 
 | File | What to set |
 |---|---|
-| `databricks.yml` | `experiment_id`, Genie `space_id`, SQL warehouse id (resource + `DATABRICKS_WAREHOUSE_ID`), the `fins_genai.claims_multimodal_kb` table/volume names, the Lakebase `postgres` resource and `LAKEBASE_*` env vars, `EMBEDDING_ENDPOINT` |
-| `agent_server/agent.py` | `GENIE_SPACE_ID`, `MODEL` |
+| `databricks.yml` | `experiment_id`, SQL warehouse id (resource + `DATABRICKS_WAREHOUSE_ID`), the `fins_genai.claims_multimodal_kb` table/volume/function names, the Lakebase `postgres` resource and `LAKEBASE_*` env vars, `EMBEDDING_ENDPOINT` |
+| `agent_server/agent.py` | `MODEL` |
+| `agent_server/claims_functions.py` | `FUNCTION_SCHEMA` |
 | `agent_server/data_api.py` | `CATALOG`, `SCHEMA` (and the landing-Volume prefix) |
 
 After the first deploy, grant the app's service principal read access to the pipeline's Lakebase

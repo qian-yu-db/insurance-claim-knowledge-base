@@ -12,7 +12,7 @@ Everything here is **synthetic**. It is meant as a blueprint you adapt to your o
 |---|---|---|
 | **Sample dataset** | [`sample_data/claims/`](sample_data/claims/) | Ready-to-use synthetic test set: 3 internally-consistent auto-collision claims (60 artifacts across modalities) + `ground_truth.csv` and `eval_questions.json`. See its [README](sample_data/claims/README.md). Bring your own claim data for production. |
 | **Batch pipeline** | [`pipeline/notebooks/`](pipeline/notebooks/) | Medallion pipeline (Bronze → Silver → Gold → Lakebase hybrid search index) built on Databricks AI Functions. See its [README](pipeline/notebooks/README.md). |
-| **Genie space** | [`genie/`](genie/) | Exported config + import script for the Genie space over the structured facts (`dim_claim`, `fact_payments`) that the app routes fact/aggregation questions to. See its [README](genie/README.md). |
+| **Genie space** (optional) | [`genie/`](genie/) | Exported config + import script for a Genie space over the structured facts (`dim_claim`, `fact_payments`), for business users in the Genie UI. The app doesn't use it. See its [README](genie/README.md). |
 | **Adjuster console app** | [`adjuster-console/`](adjuster-console/) | FastAPI + vanilla-JS 2-pane app (doc/image/transcript viewer + grounded chat), deployed to Databricks Apps. |
 | **Architecture** | [`docs/claims_kb_architecture.md`](docs/claims_kb_architecture.md) | Diagram + design notes. |
 | **Data residency** | [`docs/data_residency.md`](docs/data_residency.md) | Where each asset lives (customer storage vs Databricks-managed) + Vector Search custody options (V1 retrieval). |
@@ -30,10 +30,11 @@ flowchart TB
         SILVER["Silver<br/>parse / caption / transcribe → documents"]
         GOLD["Gold<br/>semantic chunks"]
         VS["Lakebase Postgres<br/>chunk embeddings + ANN/BM25 indexes<br/>+ app metadata"]
-        FACTS["dim_claim + fact_payments<br/>Delta — structured facts"]
+        FACTS["dim_claim + fact_payments + claim notes<br/>Delta — structured facts"]
+        FNS["UC SQL table functions<br/>claim_details · claim_financials · claim_notes …"]
         BRONZE --> SILVER
         SILVER --> GOLD --> VS
-        SILVER --> FACTS
+        SILVER --> FACTS --> FNS
     end
 
     subgraph APP["Adjuster console app — adjuster-console"]
@@ -48,8 +49,7 @@ flowchart TB
     RAW --> BRONZE
     ORCH -->|"docs (hybrid search tool)"| VS
     VIEW -. metadata .-> VS
-    ORCH -->|"facts (MCP)"| GENIE["Genie space"]
-    GENIE --> FACTS
+    ORCH -->|"facts (SQL warehouse)"| FNS
     ORCH -->|"math (MCP)"| PY["python_exec"]
     VIEW -. reads .-> SILVER
 ```
@@ -58,8 +58,10 @@ flowchart TB
   audio transcription via **`ai_transcribe`** (preferred — built-in, speaker diarization) or `ai_query`
   against a Whisper endpoint (the two `03c_*` notebooks are alternatives — run one).
 - **Retrieval:** hybrid search in Lakebase Postgres over chunked, metadata-tagged documents (vector ANN +
-  BM25, fused with Reciprocal Rank Fusion), run in-process by the app's `claims_document_search` tool; exact aggregation over the
-  payment ledger stays in Delta and is answered by a Genie space (semantic search over a ledger is weak).
+  BM25, fused with Reciprocal Rank Fusion), run in-process by the app's `claims_document_search` tool. Structured questions (payments, totals,
+  claim header, note timelines) go to fixed **Unity Catalog SQL table functions** that the app runs on its
+  SQL warehouse: no SQL generation, totals computed in SQL, about 1 s per call (semantic search over a
+  ledger is weak).
 - **LLM:** the orchestrator calls `system.ai.gpt-5-2` through **Unity Gateway** (`/ai-gateway/mlflow/v1`), a
   Unity Catalog model service governed like any other securable. The app identity needs `EXECUTE` on it
   (`account users` have it by default).
@@ -69,14 +71,10 @@ flowchart TB
 
 ## Quickstart
 
-**Pipeline** — import `pipeline/notebooks/` into your workspace and run `00_config` → `08` on a
+**Pipeline** — import `pipeline/notebooks/` into your workspace and run `00_config` → `09` on a
 DBR 18.2+ / serverless-env-v3+ cluster. Notebooks 07–08 need a Lakebase project with **Lakebase Search
 enabled and its compute restarted** (see the [notebooks README](pipeline/notebooks/README.md) for
 prerequisites and the AI-function version requirements).
-
-**Genie space** — the app depends on it for structured/fact questions. Create it before deploying the app:
-`cd genie && PROFILE=<your-profile> WAREHOUSE_ID=<sql-warehouse-id> ./create_space.sh` — see
-[`genie/README.md`](genie/README.md), then put the returned `space_id` into the app config below.
 
 **App** — from `adjuster-console/`:
 ```bash
@@ -95,8 +93,9 @@ swap them for your own values before deploying:
 
 | Where | What to replace |
 |---|---|
-| `adjuster-console/databricks.yml` | Genie `space_id`, `sql_warehouse` / `warehouse_id`, `experiment_id`, the embedding serving endpoint (`databricks-gte-large-en`), the `fins_genai.claims_multimodal_kb` catalog/schema, and the Lakebase `LAKEBASE_*` env vars + `postgres` resource |
-| `adjuster-console/agent_server/agent.py` | `GENIE_SPACE_ID`, `MODEL` |
+| `adjuster-console/databricks.yml` | `sql_warehouse` / `warehouse_id`, `experiment_id`, the embedding serving endpoint (`databricks-gte-large-en`), the `fins_genai.claims_multimodal_kb` catalog/schema, and the Lakebase `LAKEBASE_*` env vars + `postgres` resource |
+| `adjuster-console/agent_server/agent.py` | `MODEL` |
+| `adjuster-console/agent_server/claims_functions.py` | `FUNCTION_SCHEMA` (where nb 09 creates the functions) |
 | `adjuster-console/agent_server/data_api.py` | `CATALOG` / `SCHEMA` (and the landing-Volume prefix) |
 | `pipeline/notebooks/00_config.py` | catalog/schema, volume path, endpoint names, Lakebase project/branch/endpoint |
 

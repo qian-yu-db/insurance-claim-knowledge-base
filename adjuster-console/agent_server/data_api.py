@@ -183,7 +183,7 @@ async def chat_stream(request: Request):
     """SSE endpoint that streams agent responses with step visibility.
 
     Retrieval-agnostic: it drives whatever tools the orchestrator agent is
-    configured with (here: Genie + claims_document_search + python_exec).
+    configured with (here: claims functions + claims_document_search + python_exec).
 
     Emits events:
       - {"type": "step", "id": "...", "label": "...", "status": "active|done"}
@@ -321,11 +321,21 @@ async def chat_history(request: Request, session_id: str = Query(...)) -> list[d
         return []
 
 
+_FUNCTION_LABELS = {
+    "claim_details": "Looking up claim details",
+    "claim_payments": "Looking up payments",
+    "claim_financials": "Looking up claim financials",
+    "payment_totals": "Calculating payment totals",
+    "top_claims": "Ranking claims",
+    "claim_notes": "Reading claim notes",
+}
+
+
 def _tool_label(tool_name: str) -> str:
     """Human-readable label for the step indicator."""
     name_lower = tool_name.lower()
-    if "genie" in name_lower or "execute_query" in name_lower:
-        return "Querying structured claims data"
+    if name_lower in _FUNCTION_LABELS:
+        return _FUNCTION_LABELS[name_lower]
     if any(k in name_lower for k in ("search", "vector", "retrieve", "vs_index", "chunk", "index")):
         return "Searching claims documents"
     if "python" in name_lower or "exec" in name_lower:
