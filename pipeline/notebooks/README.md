@@ -22,8 +22,8 @@ Implements the default architecture in [`../../docs/claims_kb_architecture.md`](
 
 Run 02 before 03 (03 reads 02's parse output to find no-text images); 03c is independent of 02/03.
 06 runs after 05 (claim-note chunks take their claim metadata from `dim_claim`); 07 and 08 are independent of each other.
-**Every function in the output schema is an agent tool**: the app's agent is given the functions nb 09
-creates, so keep other functions out of this schema.
+Adding or changing a function in nb 09 also needs the app side: a tool wrapper in
+`adjuster-console/agent_server/claims_functions.py` and an `EXECUTE` grant in the app's `databricks.yml`.
 Re-run 07 and 08 whenever the raw data changes. They fully reload their Lakebase tables. As a Lakeflow Job, wire tasks with these dependencies.
 
 ## Lakebase prerequisites (nb 07, 08)

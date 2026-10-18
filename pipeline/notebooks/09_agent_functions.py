@@ -3,21 +3,24 @@
 # MAGIC # 09 · Agent functions — fixed SQL table functions the app's agent calls as tools
 # MAGIC
 # MAGIC The agent answers structured questions (payments, totals, claim header, note timelines) through these
-# MAGIC Unity Catalog functions, served by the managed **UC Functions MCP server** for this schema
-# MAGIC (`/api/2.0/mcp/functions/<catalog>/<schema>`). Fixed, parameterized SQL: no SQL generation, totals
-# MAGIC computed in SQL (not by the LLM), deterministic results, governed by UC.
+# MAGIC Unity Catalog functions. The app runs them on its SQL warehouse (`adjuster-console/agent_server/
+# MAGIC claims_functions.py`). Fixed, parameterized SQL: no SQL generation, totals computed in SQL (not by the
+# MAGIC LLM), deterministic results, governed by UC.
 # MAGIC
-# MAGIC **Every function in this schema becomes an agent tool.** The MCP server exposes all functions in the
-# MAGIC schema, so don't create other functions here.
+# MAGIC **Adding or changing a function** also needs the app side: a tool wrapper in `claims_functions.py`
+# MAGIC (its docstring is what the LLM reads, so keep it in step with the `COMMENT`) and an `EXECUTE` grant in
+# MAGIC the app's `databricks.yml`.
 # MAGIC
 # MAGIC Payment semantics (the same ones the Genie space used):
 # MAGIC - amounts are USD; `transaction_type` is `indemnity` (to the insured/claimant), `expense` (appraisals,
 # MAGIC   inspections, IA fees) or `defense_expense` (legal defense);
-# MAGIC - `status = 'Paid'` is disbursed; anything else (e.g. "Negotiated — pending release") is agreed but not
-# MAGIC   paid, reported as *pending*;
+# MAGIC - status `Paid` (any case, trimmed) is disbursed; anything else, including a missing status (e.g.
+# MAGIC   "Negotiated — pending release"), is agreed but not paid, reported as *pending*. So paid + pending
+# MAGIC   always equals total claim cost;
 # MAGIC - total paid = sum of paid amounts; total claim cost = indemnity + all expenses, paid or pending.
 # MAGIC
-# MAGIC Claim ids are matched exactly or by suffix, so `04487` and `2026-04487` find `CLM-2026-04487`.
+# MAGIC Claim ids are matched exactly or by suffix, so `04487` and `2026-04487` find `CLM-2026-04487`. A suffix
+# MAGIC can match several claims; every result carries `claim_id` so the agent can tell them apart.
 # MAGIC `CREATE OR REPLACE`, so reruns are safe. Runs after 05 (and reads the claim-notes table).
 
 # COMMAND ----------
@@ -26,6 +29,8 @@
 # COMMAND ----------
 FQ = CFG["fq"]
 T = CFG["t"]
+PAID = "coalesce(lower(trim(status)) = 'paid', false)"   # a NULL / unknown status counts as pending
+PAID_P = PAID.replace("status", "p.status")
 
 
 def claim_match(col: str, fn: str) -> str:
@@ -64,11 +69,11 @@ RETURNS TABLE (claim_id STRING, indemnity_paid DOUBLE, expense_paid DOUBLE, defe
                payment_count BIGINT, largest_payment DOUBLE)
 COMMENT 'Financial summary of one claim in USD: paid indemnity, paid expense, paid defense expense, total paid, pending (agreed but not yet paid) amount, total claim cost (indemnity + all expenses, paid or pending), number of payment lines, largest single payment. Use for how much has been paid / is outstanding / the claim costs.'
 RETURN SELECT claim_id,
-         sum(CASE WHEN status = 'Paid' AND transaction_type = 'indemnity' THEN amount_usd ELSE 0 END),
-         sum(CASE WHEN status = 'Paid' AND transaction_type = 'expense' THEN amount_usd ELSE 0 END),
-         sum(CASE WHEN status = 'Paid' AND transaction_type = 'defense_expense' THEN amount_usd ELSE 0 END),
-         sum(CASE WHEN status = 'Paid' THEN amount_usd ELSE 0 END),
-         sum(CASE WHEN status <> 'Paid' THEN amount_usd ELSE 0 END),
+         sum(CASE WHEN {PAID} AND transaction_type = 'indemnity' THEN amount_usd ELSE 0 END),
+         sum(CASE WHEN {PAID} AND transaction_type = 'expense' THEN amount_usd ELSE 0 END),
+         sum(CASE WHEN {PAID} AND transaction_type = 'defense_expense' THEN amount_usd ELSE 0 END),
+         sum(CASE WHEN {PAID} THEN amount_usd ELSE 0 END),
+         sum(CASE WHEN NOT {PAID} THEN amount_usd ELSE 0 END),
          sum(amount_usd),
          count(*),
          max(amount_usd)
@@ -95,8 +100,8 @@ RETURN SELECT
          END AS group_value,
          count(DISTINCT p.claim_id),
          count(*),
-         sum(CASE WHEN p.status = 'Paid' THEN p.amount_usd ELSE 0 END),
-         sum(CASE WHEN p.status <> 'Paid' THEN p.amount_usd ELSE 0 END),
+         sum(CASE WHEN {PAID_P} THEN p.amount_usd ELSE 0 END),
+         sum(CASE WHEN NOT {PAID_P} THEN p.amount_usd ELSE 0 END),
          sum(p.amount_usd)
        FROM {T['fact_pay']} p LEFT JOIN {T['dim_claim']} c ON p.claim_id = c.claim_id
        GROUP BY 1
@@ -110,9 +115,9 @@ RETURNS TABLE (claim_id STRING, insured_name STRING, carrier STRING, peril STRIN
 COMMENT 'The n claims with the highest total_paid, total_claim_cost or pending_amount (USD), largest first, with insured, carrier and peril. Use for which claims cost / paid / owe the most.'
 RETURN WITH f AS (
          SELECT claim_id,
-                sum(CASE WHEN status = 'Paid' THEN amount_usd ELSE 0 END) AS total_paid,
+                sum(CASE WHEN {PAID} THEN amount_usd ELSE 0 END) AS total_paid,
                 sum(amount_usd) AS total_claim_cost,
-                sum(CASE WHEN status <> 'Paid' THEN amount_usd ELSE 0 END) AS pending_amount
+                sum(CASE WHEN NOT {PAID} THEN amount_usd ELSE 0 END) AS pending_amount
          FROM {T['fact_pay']} GROUP BY claim_id)
        , m AS (
          SELECT f.claim_id, c.insured_name, c.carrier, c.peril,
@@ -137,10 +142,10 @@ RETURNS TABLE (claim_id STRING, note_time STRING, adjuster_id STRING, adjuster_n
 COMMENT 'Adjuster claim notes (activity log) for one claim, oldest first, limited to the most recent last_n: when (note_time, as recorded by the notes system), who (adjuster / manager / SIU id and name) and the note text. Use for the claim timeline, the latest note or status, and who did what when.'
 RETURN SELECT claim_id, date_format(timestamp, 'yyyy-MM-dd HH:mm') AS note_time, adjuster_id, adjuster_name, log FROM (
          -- alias the table: it may share the function's name, which qualifies the parameters
-         SELECT nt.*, row_number() OVER (ORDER BY nt.timestamp DESC) AS rn
+         SELECT nt.*, row_number() OVER (PARTITION BY nt.claim_id ORDER BY nt.timestamp DESC) AS rn
          FROM {T['notes']} AS nt WHERE {claim_match('nt.claim_id', 'claim_notes')})
        WHERE rn <= claim_notes.last_n
-       ORDER BY timestamp
+       ORDER BY claim_id, timestamp
 """,
 }
 

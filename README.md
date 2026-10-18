@@ -97,7 +97,7 @@ swap them for your own values before deploying:
 | `adjuster-console/agent_server/agent.py` | `MODEL` |
 | `adjuster-console/agent_server/claims_functions.py` | `FUNCTION_SCHEMA` (where nb 09 creates the functions) |
 | `adjuster-console/agent_server/data_api.py` | `CATALOG` / `SCHEMA` (and the landing-Volume prefix) |
-| `pipeline/notebooks/00_config.py` | catalog/schema, volume path, endpoint names, Lakebase project/branch/endpoint |
+| `pipeline/notebooks/00_config.py` | catalog/schema, volume path, claim-notes table, endpoint names, Lakebase project/branch/endpoint. If the claim-notes table lives elsewhere, also point the app's `claim_notes` `SELECT` grant in `databricks.yml` at it |
 
 `uv run quickstart` regenerates `.env` (git-ignored) and the MLflow experiment for your workspace.
 

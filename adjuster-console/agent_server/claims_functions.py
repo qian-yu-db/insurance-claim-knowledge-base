@@ -21,35 +21,47 @@ logger = logging.getLogger(__name__)
 
 FUNCTION_SCHEMA = "fins_genai.claims_multimodal_kb"
 WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "")
-_MAX_WAIT_S = 60  # covers a cold serverless warehouse start
+_MAX_WAIT_S = 60  # total, incl. the first 30 s wait; covers a cold serverless warehouse start
 _w = WorkspaceClient()
 
 
 def call_function(name: str, *args) -> str:
     """`SELECT * FROM <schema>.<name>(args…)`; returns JSON {columns, rows} or an `ERROR:` message."""
+    if not WAREHOUSE_ID:
+        return "ERROR: the structured claims data is not configured (DATABRICKS_WAREHOUSE_ID). Tell the user."
     placeholders = ", ".join(f":p{i}" for i in range(len(args)))
     params = [StatementParameterListItem(name=f"p{i}", value=str(v), type="INT" if isinstance(v, int) else "STRING")
               for i, v in enumerate(args)]
+    start = time.monotonic()
     try:
         resp = _w.statement_execution.execute_statement(
             warehouse_id=WAREHOUSE_ID, statement=f"SELECT * FROM {FUNCTION_SCHEMA}.{name}({placeholders})",
             parameters=params, wait_timeout="30s",
         )
-        deadline = time.monotonic() + _MAX_WAIT_S
+        deadline = start + _MAX_WAIT_S
         while resp.status.state.value in ("PENDING", "RUNNING") and time.monotonic() < deadline:
             time.sleep(1)
             resp = _w.statement_execution.get_statement(resp.statement_id)
+        if resp.status.state.value in ("PENDING", "RUNNING"):
+            _w.statement_execution.cancel_execution(resp.statement_id)  # nobody will read it
+            return ("ERROR: the structured claims data took too long to answer (the SQL warehouse may be "
+                    "starting). Tell the user to try again in a minute.")
+        state = resp.status.state.value
+        if state != "SUCCEEDED":
+            message = resp.status.error.message if resp.status.error else state
+            return f"ERROR: {message}"
+        rows = list(resp.result.data_array or []) if resp.result else []
+        chunk = resp.result.next_chunk_index if resp.result else None
+        while chunk is not None:  # large results arrive in several chunks
+            part = _w.statement_execution.get_statement_result_chunk_n(resp.statement_id, chunk)
+            rows.extend(part.data_array or [])
+            chunk = part.next_chunk_index
     except Exception as e:
         logger.error("Claims function %s failed: %s", name, e)
         return f"ERROR: the structured claims data could not be reached ({e}). Tell the user."
-    state = resp.status.state.value
-    if state != "SUCCEEDED":
-        message = resp.status.error.message if resp.status.error else state
-        return f"ERROR: {message}"
-    columns = [c.name for c in resp.manifest.schema.columns]
-    rows = resp.result.data_array if resp.result and resp.result.data_array else []
     if not rows:
-        return "No rows. Check the claim number; it may not exist."
+        return "No rows returned (no matching claim, or nothing recorded yet)."
+    columns = [c.name for c in resp.manifest.schema.columns]
     return json.dumps({"columns": columns, "rows": rows})
 
 

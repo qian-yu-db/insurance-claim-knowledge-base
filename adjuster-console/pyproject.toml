@@ -2,7 +2,7 @@
 [project]
 name = "agent-server"
 version = "0.1.0"
-description = "Multi-agent orchestrator that queries other agents, Genie spaces, and serving endpoints"
+description = "Multi-agent orchestrator that queries other agents and serving endpoints"
 readme = "README.md"
 authors = [
     { name = "Agent Developer", email = "developer@example.com" }
