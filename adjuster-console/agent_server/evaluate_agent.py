@@ -23,6 +23,9 @@ from mlflow.genai.scorers import Correctness, RelevanceToQuery, RetrievalGrounde
 from mlflow.types.responses import ResponsesAgentRequest
 
 load_dotenv(dotenv_path=".env", override=True)
+# Questions in flight at once. The default (10) makes the agent's per-turn MCP connect time out and
+# inflates latency; the app sees one turn per user at a time. Override with the env var.
+os.environ.setdefault("MLFLOW_GENAI_EVAL_MAX_WORKERS", "2")
 logging.getLogger("mlflow.utils.autologging_utils").setLevel(logging.ERROR)
 
 from agent_server import agent  # noqa: E402  (after .env: the agent reads its config at import)
