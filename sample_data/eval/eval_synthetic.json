@@ -1,0 +1,669 @@
+[
+  {
+    "inputs": {
+      "question": "What is the date of loss for claim number CLM-2026-04412?",
+      "claim_id": "CLM-2026-04412"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The date of loss for claim number CLM-2026-04412 is 2026-03-04."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04412/documents/CLM-2026-04412_adjuster_report.pdf"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "adjuster_report",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04412-00"
+  },
+  {
+    "inputs": {
+      "question": "Who is the carrier for claim CLM-2026-04412?",
+      "claim_id": "CLM-2026-04412"
+    },
+    "expectations": {
+      "expected_facts": [
+        "Summit Ridge Casualty is the carrier for claim CLM-2026-04412."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04412/images/CLM-2026-04412_release_scanned.tiff"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "release_form",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04412-01"
+  },
+  {
+    "inputs": {
+      "question": "What were the MRI findings for claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The MRI findings indicate lumbar disc herniation.",
+        "The herniation is located at the L4-L5 disc level.",
+        "The findings are coded as M51.26."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/images/CLM-2026-04487_scan_page_2.png"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "medical_record",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-02"
+  },
+  {
+    "inputs": {
+      "question": "What is the deductible amount for collision coverage on claim CLM-2026-04412?",
+      "claim_id": "CLM-2026-04412"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The deductible amount for collision coverage on claim CLM-2026-04412 is $500.00."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04412/documents/CLM-2026-04412_policy_declarations.pdf"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "policy_document",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04412-03"
+  },
+  {
+    "inputs": {
+      "question": "What are the findings indicated in the CT Head study for claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "Post-concussive syndrome (F07.81) was found in the CT Head study for claim CLM-2026-04487.",
+        "Findings consistent with acute traumatic injury were found in the CT Head study for claim CLM-2026-04487."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/images/CLM-2026-04487_scan_page_3.png"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "medical_record",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-04"
+  },
+  {
+    "inputs": {
+      "question": "Who is the patient in claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The patient associated with claim CLM-2026-04487 is Denise R. Varga."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/images/CLM-2026-04487_scan_page_1.png"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "medical_record",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-05"
+  },
+  {
+    "inputs": {
+      "question": "What impression was noted in the imaging report for claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The impression noted in the imaging report for claim CLM-2026-04487 is \"Findings consistent with acute traumatic injury.\""
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/images/CLM-2026-04487_scan_page_1.png"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "medical_record",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-06"
+  },
+  {
+    "inputs": {
+      "question": "What is the deductible for comprehensive coverage in claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The deductible amount for comprehensive coverage in claim CLM-2026-04487 is $250.00."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/documents/CLM-2026-04487_policy_declarations.pdf"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "policy_document",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-07"
+  },
+  {
+    "inputs": {
+      "question": "What is the policy number for claim CLM-2026-04531?",
+      "claim_id": "CLM-2026-04531"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The policy number is PA-2026-101618580."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04531/documents/CLM-2026-04531_policy_declarations.pdf"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "policy_document",
+      "reviewed": "corrected"
+    },
+    "id": "syn-04531-08"
+  },
+  {
+    "inputs": {
+      "question": "What is the amount for medical specials in claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The amount of medical specials in claim CLM-2026-04487 is $74,210.00."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/documents/CLM-2026-04487_claim_evaluation.docx"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "claim_evaluation",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-09"
+  },
+  {
+    "inputs": {
+      "question": "Who is the insured person in claim CLM-2026-04531?",
+      "claim_id": "CLM-2026-04531"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The insured person in claim CLM-2026-04531 is Angela M. Foster."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04531/images/CLM-2026-04531_release_scanned.tiff"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "release_form",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04531-10"
+  },
+  {
+    "inputs": {
+      "question": "According to the repair estimate, what is the net amount after the deductible on claim CLM-2026-04531?",
+      "claim_id": "CLM-2026-04531"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The net payable amount for claim number CLM-2026-04531 is $6,381.00."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04531/documents/CLM-2026-04531_repair_estimate.pdf"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "repair_estimate",
+      "reviewed": "corrected"
+    },
+    "id": "syn-04531-11"
+  },
+  {
+    "inputs": {
+      "question": "What is the daily limit for transportation expense reimbursement for claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The daily limit for transportation expense reimbursement for claim CLM-2026-04487 is $50."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/documents/CLM-2026-04487_endorsement_rental.pdf"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "endorsement",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-12"
+  },
+  {
+    "inputs": {
+      "question": "What are the liability limits for bodily injury and property damage in claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The bodily injury liability limits are $250,000 per person and $500,000 per occurrence.",
+        "The property damage liability limit is $100,000."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/documents/CLM-2026-04487_coverage_position_letter.docx"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "coverage_letter",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-13"
+  },
+  {
+    "inputs": {
+      "question": "What injuries were alleged by the claimant in CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "claimant alleged cervical injuries",
+        "claimant alleged lumbar injuries"
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/documents/CLM-2026-04487_fnol_auto.pdf"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "fnol_claim_form",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-14"
+  },
+  {
+    "inputs": {
+      "question": "What is the make, model, and year of the vehicle involved in claim CLM-2026-04412?",
+      "claim_id": "CLM-2026-04412"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The vehicle's make is Honda.",
+        "The vehicle's model is Accord EX.",
+        "The vehicle's year is 2022."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04412/correspondence/CLM-2026-04412_01_general_correspondence.eml"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "email_correspondence",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04412-15"
+  },
+  {
+    "inputs": {
+      "question": "What is the appraised repair value for claim CLM-2026-04412?",
+      "claim_id": "CLM-2026-04412"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The appraised repair value for claim CLM-2026-04412 is $3,160.25."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04412/structured/CLM-2026-04412_vendor_appraisal.html"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "vendor_appraisal",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04412-16"
+  },
+  {
+    "inputs": {
+      "question": "What is the make and model of the vehicle involved in claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The make of the vehicle is Toyota",
+        "The model of the vehicle is Highlander XLE",
+        "The year of the vehicle is 2023"
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/correspondence/CLM-2026-04487_01_general_correspondence.eml"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "email_correspondence",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-17"
+  },
+  {
+    "inputs": {
+      "question": "What is the date of loss for claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The date of loss for claim CLM-2026-04487 is 2026-02-11."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/structured/CLM-2026-04487_metadata.xml"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "claim_metadata",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-18"
+  },
+  {
+    "inputs": {
+      "question": "Who is the adjuster assigned to claim CLM-2026-04531?",
+      "claim_id": "CLM-2026-04531"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The assigned adjuster is Marcus D. Hale."
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "email_correspondence",
+      "reviewed": "corrected"
+    },
+    "id": "syn-04531-19"
+  },
+  {
+    "inputs": {
+      "question": "Why is an examination under oath recommended for claim CLM-2026-04531?",
+      "claim_id": "CLM-2026-04531"
+    },
+    "expectations": {
+      "expected_facts": [
+        "There is an inconsistency between the reported deer strike and the observed damage.",
+        "This inconsistency has led to the recommendation for an examination under oath for claim CLM-2026-04531."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04531/correspondence/CLM-2026-04531_02_investigation_report.eml"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "email_correspondence",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04531-20"
+  },
+  {
+    "inputs": {
+      "question": "Why was the claim for CLM-2026-04531 reported 3 days late?",
+      "claim_id": "CLM-2026-04531"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The insured said the car was still drivable, so she didn't think reporting was urgent."
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "adjuster_note",
+      "reviewed": "corrected"
+    },
+    "id": "syn-04531-21"
+  },
+  {
+    "inputs": {
+      "question": "What is the date of loss for claim CLM-2026-04531?",
+      "claim_id": "CLM-2026-04531"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The date of loss for claim CLM-2026-04531 is 2026-04-19."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04531/structured/CLM-2026-04531_metadata.xml"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "claim_metadata",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04531-22"
+  },
+  {
+    "inputs": {
+      "question": "What is the name of the other driver in claim CLM-2026-04487, and was she hurt?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The other driver is Denise R. Varga.",
+        "She was hurt and taken to the hospital by ambulance."
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "fnol_claim_form",
+      "reviewed": "corrected"
+    },
+    "id": "syn-04487-23"
+  },
+  {
+    "inputs": {
+      "question": "Which parts of the vehicle are damaged in claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The hood is damaged.",
+        "The front bumper is damaged.",
+        "The headlight is damaged.",
+        "The grille is damaged."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "dbfs:/Volumes/fins_genai/claims_multimodal_kb/landing/claims/CLM-2026-04487/images/IMG_4200_CLM-2026-04487.jpg"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "damage_photo",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-24"
+  },
+  {
+    "inputs": {
+      "question": "How much was the indemnity payment issued for claim CLM-2026-04412?",
+      "claim_id": "CLM-2026-04412"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The indemnity payment for claim CLM-2026-04412 was $2,660.25."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "claim_notes?claim_id=CLM-2026-04412"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "claim_notes",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04412-25"
+  },
+  {
+    "inputs": {
+      "question": "When is the EUO scheduled for claim CLM-2026-04531?",
+      "claim_id": "CLM-2026-04531"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The EUO is scheduled for claim CLM-2026-04531 on 2026-05-12."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "claim_notes?claim_id=CLM-2026-04531"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "claim_notes",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04531-26"
+  },
+  {
+    "inputs": {
+      "question": "What is the shop estimate for the damage in claim CLM-2026-04531?",
+      "claim_id": "CLM-2026-04531"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The estimate is $7,381."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "claim_notes?claim_id=CLM-2026-04531"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "claim_notes",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04531-27"
+  },
+  {
+    "inputs": {
+      "question": "What was the settlement authority granted and the recommended settlement range for claim CLM-2026-04487?",
+      "claim_id": "CLM-2026-04487"
+    },
+    "expectations": {
+      "expected_facts": [
+        "The settlement authority granted for claim CLM-2026-04487 was up to $132,500.",
+        "The recommended settlement range for claim CLM-2026-04487 was $120k-$140k."
+      ],
+      "expected_retrieved_context": [
+        {
+          "doc_uri": "claim_notes?claim_id=CLM-2026-04487"
+        }
+      ]
+    },
+    "tags": {
+      "category": "document",
+      "source": "synthetic",
+      "doc_type": "claim_notes",
+      "reviewed": "as_generated"
+    },
+    "id": "syn-04487-28"
+  }
+]

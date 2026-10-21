@@ -92,8 +92,33 @@ Locally there's no signed-in user header, so sessions are prefixed `local-dev:`.
 ```bash
 uv run --frozen python -m pytest   # unit tests
 uv run preflight                   # starts the server, sends a test request to /invocations
-uv run agent-evaluate              # MLflow evaluation (edit agent_server/evaluate_agent.py)
+uv run agent-evaluate              # MLflow evaluation of the agent (see Evaluate below)
 ```
+
+## Evaluate
+
+`uv run agent-evaluate` scores the agent (in-process, the same code the app runs) on the evaluation
+dataset `fins_genai.claims_multimodal_kb.agent_eval_v2`, an MLflow evaluation dataset in Unity Catalog.
+Results are logged to the app's MLflow experiment as run `v2-eval-<git sha>`.
+
+| Source | What it holds |
+|---|---|
+| `sample_data/eval/eval_questions.json` | Hand-written questions: document, structured (UC functions), timeline (claim notes), multi-source and out-of-scope, with expected facts, numbers and tools |
+| `sample_data/eval/eval_synthetic.json` | Document questions generated with `databricks.agents.evals.generate_evals_df` (`scripts/generate_synthetic_evals.py`), then reviewed by hand |
+
+Scorers: `Correctness` (expected facts), `RelevanceToQuery`, `RetrievalGroundedness`, `Safety`, plus
+custom ones in `agent_server/eval_scorers.py`: `numbers_match`, `tool_routing`, `cites_sources`,
+`retrieved_expected_doc` (search returned the source document) and `latency_s`.
+
+```bash
+uv run agent-evaluate --build-dataset            # after editing either JSON file
+uv run agent-evaluate                            # full run
+uv run agent-evaluate --category structured --limit 3
+```
+
+To refresh the synthetic questions after the documents change, rerun
+`uv run scripts/generate_synthetic_evals.py --profile <profile> --warehouse-id <id>` from the repo root,
+review its `eval_synthetic_candidates.json`, and save the kept rows as `eval_synthetic.json`.
 
 ## Deploy
 

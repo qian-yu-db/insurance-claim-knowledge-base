@@ -1,36 +1,259 @@
-{
-  "CLM-2026-04412": [
-    {
-      "question": "What is the net amount payable to the insured after the deductible on claim CLM-2026-04412?",
-      "expected_fact": "$2,660.25 net payable after a $500 deductible."
-    },
-    {
-      "question": "What is the VIN of the insured vehicle in claim CLM-2026-04412?",
-      "expected_fact": "1HGCV1F13NA004217 (2022 Honda Accord EX)."
-    }
-  ],
-  "CLM-2026-04487": [
-    {
-      "question": "What is the plaintiff demand amount in claim CLM-2026-04487 and who made it?",
-      "expected_fact": "$225,000 demand by Ramirez Law Group on behalf of Denise R. Varga."
-    },
-    {
-      "question": "What are the alleged diagnoses in the claimant medical records for CLM-2026-04487?",
-      "expected_fact": "Cervical strain, lumbar disc herniation L4-L5, and post-concussive syndrome."
-    },
-    {
-      "question": "What settlement amount did the carrier offer in CLM-2026-04487?",
-      "expected_fact": "$132,500, negotiated, pending release."
-    }
-  ],
-  "CLM-2026-04531": [
-    {
-      "question": "Why was claim CLM-2026-04531 referred to the Special Investigations Unit?",
-      "expected_fact": "Damage pattern is inconsistent with the reported deer strike; SIU recommends examination under oath (ref SIU-2026-0771)."
-    },
-    {
-      "question": "Which attachment in the SIU investigation email is NOT filed in the claim folder?",
-      "expected_fact": "The SIU field photo log (CLM-2026-04531_SIU_field_photo_log.pdf) exists only as an email attachment."
-    }
-  ]
-}
+[
+  {
+    "id": "doc-04412-net-payable",
+    "category": "document",
+    "claim_id": "CLM-2026-04412",
+    "question": "What is the net amount payable to the insured after the deductible on claim CLM-2026-04412?",
+    "expected_facts": ["$2,660.25 net payable after a $500 deductible."]
+  },
+  {
+    "id": "doc-04412-vin",
+    "category": "document",
+    "claim_id": "CLM-2026-04412",
+    "question": "What is the VIN of the insured vehicle in claim CLM-2026-04412?",
+    "expected_facts": ["The VIN is 1HGCV1F13NA004217.", "The vehicle is a 2022 Honda Accord EX."]
+  },
+  {
+    "id": "doc-04487-demand",
+    "category": "document",
+    "claim_id": "CLM-2026-04487",
+    "question": "What is the plaintiff demand amount in claim CLM-2026-04487 and who made it?",
+    "expected_facts": ["The demand is $225,000.", "It was made by Ramirez Law Group on behalf of Denise R. Varga."]
+  },
+  {
+    "id": "doc-04487-diagnoses",
+    "category": "document",
+    "claim_id": "CLM-2026-04487",
+    "question": "What are the alleged diagnoses in the claimant medical records for CLM-2026-04487?",
+    "expected_facts": ["Cervical strain.", "Lumbar disc herniation at L4-L5.", "Post-concussive syndrome."]
+  },
+  {
+    "id": "doc-04487-offer",
+    "category": "document",
+    "claim_id": "CLM-2026-04487",
+    "question": "What settlement amount did the carrier offer in CLM-2026-04487?",
+    "expected_facts": ["$132,500.", "It is negotiated and pending a signed release."]
+  },
+  {
+    "id": "doc-04531-siu-reason",
+    "category": "document",
+    "claim_id": "CLM-2026-04531",
+    "question": "Why was claim CLM-2026-04531 referred to the Special Investigations Unit?",
+    "expected_facts": ["The damage pattern is inconsistent with the reported deer strike.",
+                       "SIU recommends an examination under oath (reference SIU-2026-0771)."]
+  },
+  {
+    "id": "doc-04531-photo-log",
+    "category": "document",
+    "claim_id": "CLM-2026-04531",
+    "question": "Which attachment in the SIU investigation email for CLM-2026-04531 is not filed in the claim folder?",
+    "expected_facts": ["The SIU field photo log (CLM-2026-04531_SIU_field_photo_log.pdf) exists only as an email attachment."]
+  },
+
+  {
+    "id": "fin-04487-paid-pending",
+    "category": "structured",
+    "claim_id": "CLM-2026-04487",
+    "question": "How much has been paid on CLM-2026-04487 and how much is still pending?",
+    "expected_facts": ["$12,850 has been paid.", "$132,500 is pending (agreed, not yet paid)."],
+    "expected_numbers": [12850, 132500],
+    "expected_tools": ["claim_financials"]
+  },
+  {
+    "id": "fin-04487-total-cost",
+    "category": "structured",
+    "claim_id": "CLM-2026-04487",
+    "question": "What is the total claim cost of CLM-2026-04487 so far?",
+    "expected_facts": ["The total claim cost is $145,350 (indemnity plus all expenses, paid or pending)."],
+    "expected_numbers": [145350],
+    "expected_tools": ["claim_financials"]
+  },
+  {
+    "id": "fin-04412-breakdown",
+    "category": "structured",
+    "claim_id": "CLM-2026-04412",
+    "question": "Break down what has been paid on CLM-2026-04412 by type.",
+    "expected_facts": ["$2,660.25 indemnity was paid.", "$350 expense was paid.", "The total paid is $3,010.25."],
+    "expected_numbers": [2660.25, 350, 3010.25],
+    "expected_tools": ["claim_financials"]
+  },
+  {
+    "id": "fin-04487-defense-payment",
+    "category": "structured",
+    "claim_id": "CLM-2026-04487",
+    "question": "Who received the defense expense payment on CLM-2026-04487, how much, and when?",
+    "expected_facts": ["Nguyen & Associates was paid $12,500.", "The payment date is 2026-08-14."],
+    "expected_numbers": [12500],
+    "expected_tools": ["claim_payments"]
+  },
+  {
+    "id": "fin-04531-payments",
+    "category": "structured",
+    "claim_id": "CLM-2026-04531",
+    "question": "What payments have been made on CLM-2026-04531?",
+    "expected_facts": ["Only one payment: $350 to Apex Appraisal Services (expense)."],
+    "expected_numbers": [350],
+    "expected_tools": ["claim_payments"]
+  },
+  {
+    "id": "hdr-04487-parties",
+    "category": "structured",
+    "claim_id": "CLM-2026-04487",
+    "question": "Who is the insurer, the insured, the claimant and the assigned adjuster on CLM-2026-04487?",
+    "expected_facts": ["The insurer is Harbor Mutual Insurance.", "The insured is Patricia J. Carmichael.",
+                       "The claimant is Denise R. Varga.", "The adjuster is Renata C. Diaz."],
+    "expected_tools": ["claim_details"]
+  },
+  {
+    "id": "hdr-04531-policy-loss",
+    "category": "structured",
+    "claim_id": "CLM-2026-04531",
+    "question": "What is the policy number and date of loss on CLM-2026-04531?",
+    "expected_facts": ["The policy number is PA-2026-101618580.", "The date of loss is 2026-04-19."],
+    "expected_tools": ["claim_details"]
+  },
+  {
+    "id": "port-paid-by-carrier",
+    "category": "structured",
+    "claim_id": null,
+    "question": "What is the total paid by carrier across all claims?",
+    "expected_facts": ["Harbor Mutual Insurance: $12,850.", "Summit Ridge Casualty: $3,010.25.",
+                       "Blue Meridian Insurance: $350."],
+    "expected_numbers": [12850, 3010.25, 350],
+    "expected_tools": ["payment_totals"]
+  },
+  {
+    "id": "port-totals",
+    "category": "structured",
+    "claim_id": null,
+    "question": "Across all claims, how much has been paid and how much is pending?",
+    "expected_facts": ["$16,210.25 has been paid.", "$132,500 is pending."],
+    "expected_numbers": [16210.25, 132500],
+    "expected_tools": ["payment_totals"]
+  },
+  {
+    "id": "port-by-type",
+    "category": "structured",
+    "claim_id": null,
+    "question": "How much has been paid in total for each transaction type?",
+    "expected_facts": ["Indemnity paid: $2,660.25.", "Expense paid: $1,050.", "Defense expense paid: $12,500."],
+    "expected_numbers": [2660.25, 1050, 12500],
+    "expected_tools": ["payment_totals"]
+  },
+  {
+    "id": "port-top-cost",
+    "category": "structured",
+    "claim_id": null,
+    "question": "Which claim has the highest total claim cost, and what is it?",
+    "expected_facts": ["CLM-2026-04487 has the highest total claim cost.", "Its total claim cost is $145,350."],
+    "expected_numbers": [145350],
+    "expected_tools": ["top_claims"]
+  },
+  {
+    "id": "fin-unknown-claim",
+    "category": "structured",
+    "claim_id": null,
+    "question": "How much has been paid on claim CLM-2026-09999?",
+    "expected_facts": ["There is no claim CLM-2026-09999 (or no payment data for it); the agent must not invent an amount."],
+    "expected_tools": ["claim_financials"]
+  },
+
+  {
+    "id": "tl-04531-latest-note",
+    "category": "timeline",
+    "claim_id": "CLM-2026-04531",
+    "question": "What is the latest note on CLM-2026-04531 and who wrote it?",
+    "expected_facts": ["The latest note is from 2026-04-30 15:05 by Marcus D. Hale.",
+                       "The EUO is scheduled for 2026-05-12.", "The only payment to date is the $350 Apex appraisal fee."],
+    "expected_tools": ["claim_notes"]
+  },
+  {
+    "id": "tl-04487-authority",
+    "category": "timeline",
+    "claim_id": "CLM-2026-04487",
+    "question": "Who granted settlement authority on CLM-2026-04487, when, and for how much?",
+    "expected_facts": ["Gloria T. Whitfield granted it.", "On 2026-08-25.", "Authority up to $132,500."],
+    "expected_numbers": [132500],
+    "expected_tools": ["claim_notes"]
+  },
+  {
+    "id": "tl-04531-siu-referral",
+    "category": "timeline",
+    "claim_id": "CLM-2026-04531",
+    "question": "When was CLM-2026-04531 referred to SIU, and what happened next?",
+    "expected_facts": ["It was referred to SIU on 2026-04-23.",
+                       "SIU opened a file on 2026-04-24 and recommended an examination under oath on 2026-04-27.",
+                       "A reservation of rights letter was sent on 2026-04-28."],
+    "expected_tools": ["claim_notes"]
+  },
+  {
+    "id": "tl-04487-litigation",
+    "category": "timeline",
+    "claim_id": "CLM-2026-04487",
+    "question": "Walk me through the litigation on CLM-2026-04487 in order.",
+    "expected_facts": ["Suit was filed in Collin County and served on the insured 6/22; defense was assigned to Nguyen & Associates (2026-06-24).",
+                       "A $225,000 policy-limits demand was received on 2026-08-20.",
+                       "Settlement authority up to $132,500 was granted on 2026-08-25.",
+                       "$132,500 was offered and verbally accepted on 2026-08-27, pending a signed release."],
+    "expected_tools": ["claim_notes"]
+  },
+  {
+    "id": "tl-04487-reserves",
+    "category": "timeline",
+    "claim_id": "CLM-2026-04487",
+    "question": "What reserves were set on CLM-2026-04487 and when?",
+    "expected_facts": ["Reserves of $150,000 BI and $38,500 PD were set on 2026-02-16."],
+    "expected_numbers": [150000, 38500],
+    "expected_tools": ["claim_notes"]
+  },
+
+  {
+    "id": "mix-04487-why-pending",
+    "category": "multi_source",
+    "claim_id": "CLM-2026-04487",
+    "question": "Why is the indemnity on CLM-2026-04487 still pending, and how much is it?",
+    "expected_facts": ["$132,500 is pending.",
+                       "Counsel accepted the offer verbally; payment is held until the signed release is received."],
+    "expected_numbers": [132500],
+    "expected_tools": ["claim_financials", "claim_notes"]
+  },
+  {
+    "id": "mix-04412-estimate-vs-paid",
+    "category": "multi_source",
+    "claim_id": "CLM-2026-04412",
+    "question": "On CLM-2026-04412, what was the repair estimate and how does it compare with what was paid to the insured?",
+    "expected_facts": ["The repair estimate was $3,160.25.", "The insured was paid $2,660.25, the estimate less the $500 deductible."],
+    "expected_numbers": [3160.25, 2660.25, 500]
+  },
+  {
+    "id": "mix-04531-holding-payment",
+    "category": "multi_source",
+    "claim_id": "CLM-2026-04531",
+    "question": "Has anything been paid to the insured on CLM-2026-04531, and why or why not?",
+    "expected_facts": ["Nothing has been paid to the insured; the only payment is the $350 appraisal fee.",
+                       "The indemnity payment is held pending the SIU investigation and the examination under oath."],
+    "expected_numbers": [350]
+  },
+
+  {
+    "id": "oos-reserve-history",
+    "category": "out_of_scope",
+    "claim_id": "CLM-2026-04412",
+    "question": "Show me the full reserve change history on CLM-2026-04412.",
+    "expected_facts": ["The agent says the claim data does not include a reserve history and does not invent one."]
+  },
+  {
+    "id": "oos-legal-advice",
+    "category": "out_of_scope",
+    "claim_id": "CLM-2026-04487",
+    "question": "Should we accept liability on CLM-2026-04487? Give me a legal opinion.",
+    "expected_facts": ["The agent does not give a legal opinion; it can summarize the liability facts and the defense counsel evaluation in the file."]
+  },
+  {
+    "id": "oos-credit-score",
+    "category": "out_of_scope",
+    "claim_id": null,
+    "question": "What is Angela Foster's credit score?",
+    "expected_facts": ["The agent says that information is not in the claim data and does not invent it."]
+  }
+]

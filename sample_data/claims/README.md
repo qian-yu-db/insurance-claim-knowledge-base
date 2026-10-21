@@ -22,7 +22,6 @@ All data is **synthetic**. Damage photos are DALL·E-generated fakes from the
 ```
 claims/
 ├── ground_truth.csv          # every file → claim_id, modality, doc_type, format, key attributes
-├── eval_questions.json       # paired retrieval-eval questions + expected facts, per claim
 ├── _shared_templates/        # coverage_letter_TEMPLATE.dot
 └── <CLAIM_ID>/
     ├── manifest.json         # per-claim artifact manifest
@@ -38,7 +37,7 @@ claims/
 - **Documents:** PDF (incl. 100+ page mixed bundle), DOCX, RTF, DOT template
 - **Email:** EML (attachments in-folder vs. attachment-only; inline signature graphic)
 - **Images:** JPG, PNG (damage photos), TIFF (scanned docs)
-- **Audio:** MP3 (reused policy-narration calls + TTS voicemail), M4A (TTS recorded statement / SIU note)
+- **Audio:** MP3 (TTS recorded FNOL / coverage call per claim, two voices; TTS voicemail), M4A (TTS recorded statement / SIU note)
 - **Structured / long-tail:** XLSX, CSV, HTML (vendor appraisal), XML + JSON (metadata)
 
 HEIC and GIF images, TIFF damage photos, and video (MOV/MP4/3GP) were removed from the set. The pipeline
@@ -54,8 +53,8 @@ step. Keeping them made the app's file browser list files the knowledge base cou
   the "do email attachments also show up in the claim folder?" question from the use-case brief. The
   ground truth flags both `attachment_in_folder` and `attachment_only`.
 - **Ground truth** (`ground_truth.csv` + per-claim `manifest.json`) lets you score classification,
-  extraction, transcription, and cross-modal linkage. `eval_questions.json` follows the Databricks
-  Knowledge-Assistant / retrieval-eval paired-question pattern.
+  extraction, transcription, and cross-modal linkage. Agent evaluation questions live in
+  [`../eval/`](../eval/) (see the app README's *Evaluate* section).
 
 ## Provenance
 
