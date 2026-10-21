@@ -6,11 +6,12 @@ Mirrors the Agent Bricks supervisor (mas-63a9094a-endpoint) in code so the app
 controls the response (notably: surfacing document citations for the viewer pane).
 
 Tools:
-  1. Genie space          → structured claims data (fact_payments, dim_claim) [MCP]
+  1. Claims functions (claim_details, claim_payments, claim_financials, payment_totals, top_claims,
+     claim_notes) → fixed UC SQL table functions on the app's SQL warehouse (claims_functions.py)
   2. claims_document_search → unstructured claims KB via in-process Lakebase hybrid search
   3. system.ai.python_exec → ad-hoc calculations [MCP, scoped to this one function]
 
-Routing: structured → Genie, documents/narrative → claims_document_search, math → python_exec.
+Routing: structured → claims functions, documents/narrative → claims_document_search, math → python_exec.
 """
 
 import json
@@ -30,6 +31,7 @@ from mlflow.types.responses import (
     ResponsesAgentStreamEvent,
 )
 
+from agent_server.claims_functions import CLAIMS_FUNCTION_TOOLS
 from agent_server.history import normalize_history_items
 from agent_server.lakebase_search import SearchUnavailable, search_documents
 from agent_server.utils import (
@@ -41,7 +43,6 @@ from agent_server.utils import (
 # ---------------------------------------------------------------------------
 # Resource configuration (fevm-classic-stable)
 # ---------------------------------------------------------------------------
-GENIE_SPACE_ID = "01f1b0d16247106aacc4750ce7e1b24f"          # "Insurance Claims and Payments"
 PYTHON_EXEC_FN = "system.ai.python_exec"  # same securable as databricks.yml; MCP is scoped to this one
                                           # function (the schema URL would expose all of system.ai)
 MODEL = "system.ai.gpt-5-2"                                   # orchestrator LLM (Unity Gateway model service)
@@ -62,12 +63,8 @@ logger = logging.getLogger(__name__)
 
 
 def build_mcp_servers() -> list[McpServer]:
-    """The two hosted MCP tools the orchestrator routes between (document search is in-process)."""
+    """The one hosted MCP tool (document search and the claims functions run in-process)."""
     return [
-        McpServer(
-            url=build_mcp_url(f"/api/2.0/mcp/genie/{GENIE_SPACE_ID}"),
-            name="Genie (structured claims data)",
-        ),
         McpServer(
             url=build_mcp_url(f"/api/2.0/mcp/functions/{PYTHON_EXEC_FN.replace('.', '/')}"),
             name="Python exec",
@@ -81,7 +78,7 @@ async def connect_healthy_mcp_servers(
     """Connect each MCP server and verify it can list its tools; drop any that fail.
 
     The Agents SDK lists tools lazily inside ``Runner.run``, so a server that connects
-    but fails at list time (e.g. an unauthorized Genie space) would otherwise crash the
+    but fails at list time (e.g. an unauthorized function) would otherwise crash the
     whole request. We force the connectivity/authorization check here: healthy servers
     are kept; failures are dropped and their names returned so the orchestrator runs with
     whatever is available. Returns (healthy_servers, unavailable_names).
@@ -140,13 +137,25 @@ investigate and analyze claims by combining structured claim data with the docum
 claims knowledge base.
 
 ## Routing
-- **Structured data** (payments, totals, amounts paid, reserves, claim lookups, counts, trends, \
-comparisons by carrier / peril / adjuster, financial breakdowns): use the **Genie** tools. They \
-query fact_payments and dim_claim.
+- **Structured data**: use the claims functions. Amounts are USD; "pending" means agreed but not \
+yet paid; total claim cost = indemnity + all expenses, paid or pending. Use their totals as given; \
+don't re-add them yourself.
+  - claim header (insurer, peril, policy, insured, claimant, date/location of loss, adjuster): \
+`claim_details`
+  - how much was paid / is pending / the claim costs: `claim_financials`
+  - individual payments (who was paid what, when): `claim_payments`
+  - totals or comparisons across claims (by carrier, peril, adjuster, loss year, transaction \
+type, status): `payment_totals`
+  - which claims paid / cost / owe the most: `top_claims`
+  - claim timeline, latest note or status, who did what when: `claim_notes`
+  If a structured question doesn't fit these functions, say what you can answer instead of \
+guessing.
 - **Documents / narrative** (what happened, medical findings, injuries, correspondence, defense \
 counsel, negotiation, coverage letters, investigation/SIU, damage descriptions from photos, \
 recorded-call transcripts): use the **Claims document search** (use claims_document_search) tool.
 - **Calculations / ad-hoc math** on retrieved values: use **python_exec**.
+- A question can need both, e.g. "why is 04487 still pending?": `claim_financials` for the \
+amount, `claim_notes` or document search for the reason.
 
 ## Scoping
 When the user's question is about a specific claim, pass the claim number (e.g. CLM-2026-04487) to \
@@ -156,7 +165,8 @@ the tools so results are scoped to that claim.
 When you answer from the Claims document search tool, ALWAYS list the sources you used at the end \
 under a "Sources:" line — include each passage's `source_uri`, `doc_type`, and `claim_id` when \
 present in the tool result. The app uses these to open the exact document in the viewer pane. \
-When you answer from Genie, note that the figures come from structured claim data.
+When you answer from the claims functions, note that the figures come from structured claim \
+data; for a claim note, cite its date and author.
 
 Do not fabricate. If a needed data source is unavailable, say so briefly instead of guessing. If \
 the request is ambiguous, ask a short clarifying question."""
@@ -178,7 +188,7 @@ def create_orchestrator_agent(
         instructions=instructions,
         model=MODEL,
         mcp_servers=mcp_servers,
-        tools=[claims_document_search],
+        tools=[claims_document_search, *CLAIMS_FUNCTION_TOOLS],
     )
 
 

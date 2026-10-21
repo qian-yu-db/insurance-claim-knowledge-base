@@ -12,7 +12,7 @@ def test_no_vector_search_mcp():
     from agent_server import agent
     urls = [_server_url(s) for s in agent.build_mcp_servers()]
     assert not any("vector-search" in u for u in urls)
-    assert any("genie" in u for u in urls)
+    assert not any("/mcp/genie/" in u for u in urls)  # structured data goes through the claims functions
 
 
 def test_doc_search_tool_registered():
@@ -20,6 +20,8 @@ def test_doc_search_tool_registered():
     a = agent.create_orchestrator_agent([], [])
     names = [getattr(t, "name", getattr(t, "__name__", "")) for t in a.tools]
     assert "claims_document_search" in names
+    assert {"claim_details", "claim_payments", "claim_financials", "payment_totals", "top_claims",
+            "claim_notes"} <= set(names)
 
 
 def test_tool_reports_unavailable_not_empty(monkeypatch):

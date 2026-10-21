@@ -18,9 +18,12 @@ Implements the default architecture in [`../../docs/claims_kb_architecture.md`](
 | 06 | `06_gold_chunks` | `ai_prep_search` chunks + metadata propagation; adjuster claim notes (Delta table) chunked in | 04, 05 |
 | 07 | `07_lakebase_embed_sync` | embed `gold_chunks` → Lakebase `claims.gold_chunks_embeddings` + ANN/BM25 indexes | 06 |
 | 08 | `08_lakebase_metadata_sync` | copy `dim_claim`, `bronze_file_registry`, `silver_documents` → Lakebase `claims` schema | 04, 05 |
+| 09 | `09_agent_functions` | UC SQL table functions the app's agent calls as tools (`claim_details`, `claim_payments`, `claim_financials`, `payment_totals`, `top_claims`, `claim_notes`) | 05 |
 
 Run 02 before 03 (03 reads 02's parse output to find no-text images); 03c is independent of 02/03.
 06 runs after 05 (claim-note chunks take their claim metadata from `dim_claim`); 07 and 08 are independent of each other.
+Adding or changing a function in nb 09 also needs the app side: a tool wrapper in
+`adjuster-console/agent_server/claims_functions.py` and an `EXECUTE` grant in the app's `databricks.yml`.
 Re-run 07 and 08 whenever the raw data changes. They fully reload their Lakebase tables. As a Lakeflow Job, wire tasks with these dependencies.
 
 ## Lakebase prerequisites (nb 07, 08)
@@ -106,7 +109,7 @@ range filters; don't use free text as a filter.
 ## Running
 
 **As a Lakeflow Job (recommended):** `pipeline/databricks.yml` defines `claims-kb-pipeline`, a serverless
-job wiring 01 → 08 with the dependencies above. It uses the `ai_transcribe` variant of 03c.
+job wiring 01 → 09 with the dependencies above. It uses the `ai_transcribe` variant of 03c.
 ```bash
 cd pipeline
 databricks bundle deploy -t dev --profile <profile>
@@ -116,7 +119,7 @@ The job has a file-arrival trigger on the landing Volume, so it can refresh the 
 files change. The trigger ships **paused**; unpause it in the Jobs UI once you're happy with the job.
 Run the job as the identity that owns the Lakebase `claims` tables, so the app's grants keep applying.
 
-Interactively: open `00_config`, set widgets, then run 01→08 in order. As a Job: create one task per
+Interactively: open `00_config`, set widgets, then run 01→09 in order. As a Job: create one task per
 notebook with the dependencies above; all share the same widget values (set as job parameters). Compute
 must provide `ai_parse_document` (DBR 17.3+) and `ai_prep_search` (DBR 18.2+) — a serverless SQL
 warehouse or matching cluster.

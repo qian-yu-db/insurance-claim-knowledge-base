@@ -7,7 +7,7 @@ resources:
     agent_openai_agents_sdk_multiagent:
       name: "agent-openai-multiagent"
       description: "Adjuster console: claim document viewer + grounded chat (Lakebase hybrid
-        search, Genie, python_exec)"
+        search, claims functions, python_exec)"
       source_code_path: ./
       config:
         # Single process: FastAPI serves the agent (/invocations), the data APIs (/api/*),
@@ -45,12 +45,47 @@ resources:
             experiment_id: "2456186449359403"
             permission: 'CAN_MANAGE'
 
-        # Genie space — structured claims data (fact_payments, dim_claim)
-        - name: 'genie_space'
-          genie_space:
-            name: 'Insurance Claims and Payments'
-            space_id: '01f1b0d16247106aacc4750ce7e1b24f'
-            permission: 'CAN_RUN'
+        # Claims functions (pipeline nb 09): structured tools, run on the SQL warehouse below
+        - name: 'fn_claim_details'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.claim_details'
+            securable_type: 'FUNCTION'
+            permission: 'EXECUTE'
+        - name: 'fn_claim_payments'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.claim_payments'
+            securable_type: 'FUNCTION'
+            permission: 'EXECUTE'
+        - name: 'fn_claim_financials'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.claim_financials'
+            securable_type: 'FUNCTION'
+            permission: 'EXECUTE'
+        - name: 'fn_payment_totals'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.payment_totals'
+            securable_type: 'FUNCTION'
+            permission: 'EXECUTE'
+        - name: 'fn_top_claims'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.top_claims'
+            securable_type: 'FUNCTION'
+            permission: 'EXECUTE'
+        - name: 'fn_claim_notes'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.claim_notes'
+            securable_type: 'FUNCTION'
+            permission: 'EXECUTE'
+        - name: 'fact_payments'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.fact_payments'
+            securable_type: 'TABLE'
+            permission: 'SELECT'
+        - name: 'claim_notes'
+          uc_securable:
+            securable_full_name: 'fins_genai.claims_multimodal_kb.claim_notes'
+            securable_type: 'TABLE'
+            permission: 'SELECT'
 
         # python_exec — ad-hoc calculations
         - name: 'python_exec'

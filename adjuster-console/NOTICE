@@ -11,8 +11,8 @@ adjacent LICENSE file; use is tied to the Databricks Services.
 Modifications by the insurance-claim-knowledge-base project (2026):
 
 - Modified files (changed from the upstream template):
-  - agent_server/agent.py         — rewritten as a claims orchestrator over Genie,
-                                     Vector Search, and python_exec (hosted MCP servers)
+  - agent_server/agent.py         — rewritten as a claims orchestrator over UC SQL functions,
+                                     Lakebase hybrid search, and python_exec (hosted MCP server)
   - agent_server/start_server.py  — mounts the doc/claim/file data API and the static SPA
   - databricks.yml                — app name, single-process command, resource grants
   - pyproject.toml                — added dependencies (databricks-sdk, pillow, pillow-heif)

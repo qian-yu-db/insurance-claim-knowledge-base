@@ -1,8 +1,11 @@
 # Genie space — structured claims facts
 
-The adjuster console answers **fact / aggregation** questions ("total paid on claim X", "sum by peril")
-by routing them to a **Genie space** over the structured tables, while document questions go to Vector
-Search. This folder makes that Genie space reproducible.
+A **Genie space** over the structured tables (`dim_claim`, `fact_payments`) for business users who want
+to ask ad-hoc questions in the Genie UI. This folder makes it reproducible.
+
+> **The adjuster console no longer uses it** (since v2.2.0). A Genie call took 15–20 s per question, so
+> the app now answers structured questions with fixed UC SQL table functions (pipeline nb 09), about 1 s
+> per call. The functions encode the same payment semantics as this space's instructions.
 
 Genie spaces are configured in the workspace (not a declarative bundle resource), so this folder captures
 the space as an exported, portable spec you re-import into your own workspace.

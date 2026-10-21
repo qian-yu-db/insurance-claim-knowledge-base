@@ -74,3 +74,10 @@ resources:
             - task_key: structured_facts
           notebook_task:
             notebook_path: ../notebooks/08_lakebase_metadata_sync.py
+
+        # Fixed SQL table functions the app's agent calls as tools (needs dim_claim, fact_payments, notes)
+        - task_key: agent_functions
+          depends_on:
+            - task_key: structured_facts
+          notebook_task:
+            notebook_path: ../notebooks/09_agent_functions.py
