@@ -65,6 +65,14 @@ def build_hybrid_sql(emb_str: str, claim_id: str | None, top_k: int, query_text:
     return sql, params
 
 
+def doc_uri(result: dict) -> str | None:
+    """The document a chunk came from, as evaluation expects it: the file's source_uri, or for claim
+    notes (no file behind them) one document per claim."""
+    if result.get("doc_type") == "claim_notes":
+        return f"claim_notes?claim_id={result.get('claim_id')}"
+    return result.get("source_uri")
+
+
 def search_documents(query: str, claim_id: str | None = None, top_k: int = 10) -> list[dict]:
     """Hybrid search. Returns [] when nothing matches; raises SearchUnavailable on failure."""
     if not lb.available:
@@ -82,7 +90,8 @@ def search_documents(query: str, claim_id: str | None = None, top_k: int = 10) -
                 "content": r.get("chunk_to_retrieve"), "relevance_score": float(r.get("rrf_score", 0.0)),
             } for r in rows]
             span.set_outputs([Document(id=r["chunk_id"], page_content=r["content"] or "",
-                              metadata={k: v for k, v in r.items() if k not in ("content", "chunk_id")})
+                              metadata={"doc_uri": doc_uri(r),
+                                        **{k: v for k, v in r.items() if k not in ("content", "chunk_id")}})
                               for r in results])
         return results
     except Exception as e:

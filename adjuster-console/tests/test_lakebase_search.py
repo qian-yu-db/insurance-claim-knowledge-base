@@ -39,3 +39,11 @@ def test_pool_unavailable_raises(monkeypatch):
     monkeypatch.setattr(type(ls.lb), "available", property(lambda self: False))
     with pytest.raises(ls.SearchUnavailable):
         ls.search_documents("anything")
+
+
+def test_doc_uri_for_files_and_claim_notes():
+    # Evaluation matches retrieved documents on doc_uri; claim notes have no file, one doc per claim.
+    from agent_server.lakebase_search import doc_uri
+    assert doc_uri({"doc_type": "email_correspondence", "source_uri": "dbfs:/Volumes/x/a.eml"}) == "dbfs:/Volumes/x/a.eml"
+    assert doc_uri({"doc_type": "claim_notes", "claim_id": "CLM-2026-04487", "source_uri": None}) == \
+        "claim_notes?claim_id=CLM-2026-04487"
