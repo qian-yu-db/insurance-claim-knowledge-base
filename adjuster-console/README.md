@@ -116,6 +116,11 @@ uv run agent-evaluate                            # full run
 uv run agent-evaluate --category structured --limit 3
 ```
 
+**In the workspace:** the notebook [`evaluation/agent_evaluation.py`](../evaluation/agent_evaluation.py) runs the
+same evaluation interactively. Import it into the workspace and point its `agent_root` widget at a folder
+that contains `agent_server/`, by default the app's deployed bundle files. Each run logs that bundle's git
+branch and commit as parameters. Results go to the same experiment.
+
 To refresh the synthetic questions after the documents change, rerun
 `uv run scripts/generate_synthetic_evals.py --profile <profile> --warehouse-id <id>` from the repo root,
 review its `eval_synthetic_candidates.json`, and save the kept rows as `eval_synthetic.json`.
